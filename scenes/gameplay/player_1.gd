@@ -1,6 +1,7 @@
-# PlayerSnake.gd
+# Player1.gd
 extends BasePlayer
 
+# Captures keyboard and controller inputs to change movement direction
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("p1_moveUp") and current_direction != Vector2i.DOWN:
 		current_direction = Vector2i.UP

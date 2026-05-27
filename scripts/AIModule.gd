@@ -119,7 +119,7 @@ func evaluate(state: Dictionary, terminal_status: Dictionary) -> float:
 	return 1.0 * (blue_trail - red_trail) + 2.0 * (blue_reach - red_reach)
 
 # Breadth-First Search (BFS) for Flood-Fill Spatial Analysis
-func bfs_reachable(state: Array, head_pos: Vector2i) -> int:
+func bfs_reachable(state: Dictionary, head_pos: Vector2i) -> int:
 	var matrix = state["matrix"]
 	var visited = {} # Dictionary utilized as a high-performance hash set
 	var queue: Array[Vector2i] = []
