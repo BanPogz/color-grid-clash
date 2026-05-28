@@ -5,7 +5,7 @@ class_name Gameplay extends Node2D
 @onready var ai_player: BasePlayer = $AIPlayer
 var tick_timer: Timer
 
-enum CellType {EMPTY, WALL, RED_TAIL, BLUE_TAIL, ENERGY_CORE}
+enum CellType {EMPTY, WALL, RED_TRAIL, BLUE_TRAIL, ENERGY_CORE}
 
 #Grid parameters
 var tile_size: int = 30
@@ -59,8 +59,8 @@ func generate_random_walls(density: float) -> void:
 		# Update the data matrix (Single source of truth for Crystal's Minimax)
 		grid_matrix[rand_x][rand_y] = CellType.WALL
 		
-		# Update the visual Grid Layer using correct source ID 1
-		grid_layer.set_cell(candidate_pos, 1, Vector2i(2, 0)) 
+		# Update the visual Grid Layer using wall source ID 4
+		grid_layer.set_cell(candidate_pos, 4, Vector2i(0, 0)) 
 		
 		walls_placed += 1
 		
@@ -83,7 +83,7 @@ func _ready() -> void:
 	
 	# Instantiate and configure the Timer programmatically to bypass scene dependencies
 	tick_timer = Timer.new()
-	tick_timer.wait_time = 0.2 # Tick every 200ms
+	tick_timer.wait_time = 0.5 # Tick every 200ms
 	add_child(tick_timer)
 	tick_timer.timeout.connect(_on_tick_timer_timeout)
 	tick_timer.start()
@@ -107,8 +107,18 @@ func _on_tick_timer_timeout() -> void:
 	var next_blue = ai_player.grid_position + blue_dir
 	
 	# 3. Check for terminal/crash states simultaneously
-	if check_collision(next_red) or check_collision(next_blue):
-		handle_game_over()
+	var red_crashed = check_collision(next_red)
+	var blue_crashed = check_collision(next_blue)
+	
+	if red_crashed or blue_crashed:
+		var winner_text = ""
+		if red_crashed and blue_crashed:
+			winner_text = "Game Over! DRAW - Both players crashed simultaneously!"
+		elif red_crashed:
+			winner_text = "Game Over! BLUE (AI) WINS! Red player crashed."
+		else:
+			winner_text = "Game Over! RED (Player) WINS! Blue AI crashed."
+		handle_game_over(winner_text)
 		return
 	
 	# 4. Commit moves to logical data grid matrix and record histories
@@ -122,9 +132,9 @@ func _on_tick_timer_timeout() -> void:
 	ai_player.grid_position = next_blue
 	ai_player.position = tile_to_pixel(next_blue)
 	
-	# 6. Render new trail tiles onto display (using the correct atlas source ID 1)
-	grid_layer.set_cell(next_red, 1, Vector2i(0, 0))  # Paints red trail atlas coordinate
-	grid_layer.set_cell(next_blue, 1, Vector2i(1, 0)) # Paints blue trail atlas coordinate
+	# 6. Render new trail tiles onto display using their respective source IDs
+	grid_layer.set_cell(next_red, 2, Vector2i(0, 0))  # Paints red-body.png trail
+	grid_layer.set_cell(next_blue, 3, Vector2i(0, 0)) # Paints blue-body.png trail
 
 func check_collision(pos: Vector2i) -> bool:
 	# Out of bounds check using grid size dimensions
@@ -138,12 +148,12 @@ func check_collision(pos: Vector2i) -> bool:
 func update_logical_matrix(player: BasePlayer, new_pos: Vector2i, type: String) -> void:
 	# Turn old position into trailing obstacle data
 	var old_pos = player.grid_position
-	grid_matrix[old_pos.x][old_pos.y] = CellType.RED_TAIL if type == "RED" else CellType.BLUE_TAIL
+	grid_matrix[old_pos.x][old_pos.y] = CellType.RED_TRAIL if type == "RED" else CellType.BLUE_TRAIL
 	player.body_segments.append(old_pos)
 
-func handle_game_over() -> void:
+func handle_game_over(result_message: String) -> void:
 	tick_timer.stop()
-	print("Game Over!")
+	print(result_message)
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta: float) -> void:

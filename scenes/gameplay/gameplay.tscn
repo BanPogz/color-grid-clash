@@ -1,20 +1,41 @@
 [gd_scene format=4 uid="uid://disylkqcra4y8"]
 
 [ext_resource type="Script" uid="uid://btnexngtqht72" path="res://scripts/gameplay.gd" id="1_x0t60"]
-[ext_resource type="Texture2D" uid="uid://dc0yph7lrhalm" path="res://assets/grid4.png" id="2_q64rj"]
+[ext_resource type="Texture2D" uid="uid://b5lrg64b1kswb" path="res://assets/grid3.png" id="2_elju3"]
 [ext_resource type="PackedScene" uid="uid://fwmgdt24h1fc" path="res://scenes/gameplay/player_1.tscn" id="3_0w2j2"]
 [ext_resource type="Script" uid="uid://x0mk5c5jn12b" path="res://scenes/gameplay/player_1.gd" id="4_q64rj"]
+[ext_resource type="Texture2D" uid="uid://b5b5nssvs60oh" path="res://assets/wall.png" id="5_elju3"]
 [ext_resource type="PackedScene" uid="uid://85v0w31axark" path="res://scenes/gameplay/player_2.tscn" id="5_pa1on"]
 [ext_resource type="Script" uid="uid://dp8i4cfhjkn1m" path="res://scenes/gameplay/AIPlayer.gd" id="6_0w2j2"]
+[ext_resource type="Texture2D" uid="uid://yunfrqqlkiii" path="res://assets/red-body.png" id="7_red_body"]
+[ext_resource type="Texture2D" uid="uid://b6iub3j6ojfw3" path="res://assets/blue-body.png" id="8_blue_body"]
 
-[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_elju3"]
-texture = ExtResource("2_q64rj")
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_bhb63"]
+texture = ExtResource("2_elju3")
+texture_region_size = Vector2i(30, 30)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_red"]
+texture = ExtResource("7_red_body")
+texture_region_size = Vector2i(30, 30)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_blue"]
+texture = ExtResource("8_blue_body")
+texture_region_size = Vector2i(30, 30)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_lb4ud"]
+texture = ExtResource("5_elju3")
 texture_region_size = Vector2i(30, 30)
 0:0/0 = 0
 
 [sub_resource type="TileSet" id="TileSet_q64rj"]
 tile_size = Vector2i(30, 30)
-sources/1 = SubResource("TileSetAtlasSource_elju3")
+sources/2 = SubResource("TileSetAtlasSource_red")
+sources/3 = SubResource("TileSetAtlasSource_blue")
+sources/4 = SubResource("TileSetAtlasSource_lb4ud")
+sources/1 = SubResource("TileSetAtlasSource_bhb63")
 
 [node name="Gameplay" type="Node2D" unique_id=1072367256]
 script = ExtResource("1_x0t60")
