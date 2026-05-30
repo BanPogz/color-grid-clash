@@ -1,0 +1,182 @@
+[gd_scene format=3 uid="uid://70pi5k88gfg0"]
+
+[ext_resource type="Script" uid="uid://0m0iicok7i04" path="res://scenes/hud.gd" id="1_hud_script"]
+
+[node name="HUD" type="CanvasLayer" unique_id=639300223]
+script = ExtResource("1_hud_script")
+
+[node name="Control" type="Control" parent="." unique_id=773012418]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="LeftHUD" type="PanelContainer" parent="Control" unique_id=2129901996]
+layout_mode = 0
+offset_left = 30.0
+offset_top = 60.0
+offset_right = 310.0
+offset_bottom = 660.0
+
+[node name="MarginContainer" type="MarginContainer" parent="Control/LeftHUD" unique_id=347511088]
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Control/LeftHUD/MarginContainer" unique_id=215222257]
+layout_mode = 2
+
+[node name="HeaderLabel" type="Label" parent="Control/LeftHUD/MarginContainer/VBoxContainer" unique_id=484007179]
+layout_mode = 2
+text = "Player 1"
+horizontal_alignment = 1
+
+[node name="MatchScoreLabel" type="Label" parent="Control/LeftHUD/MarginContainer/VBoxContainer" unique_id=1628531801]
+layout_mode = 2
+text = "MATCH: 0 pts"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="Control/LeftHUD/MarginContainer/VBoxContainer" unique_id=77840475]
+layout_mode = 2
+
+[node name="ScoreBox" type="VBoxContainer" parent="Control/LeftHUD/MarginContainer/VBoxContainer" unique_id=486384364]
+layout_mode = 2
+
+[node name="RoundScoreLabel" type="Label" parent="Control/LeftHUD/MarginContainer/VBoxContainer/ScoreBox" unique_id=828874852]
+layout_mode = 2
+
+[node name="CellCountLabel" type="Label" parent="Control/LeftHUD/MarginContainer/VBoxContainer/ScoreBox" unique_id=1629993543]
+layout_mode = 2
+
+[node name="ProgressBar" type="ProgressBar" parent="Control/LeftHUD/MarginContainer/VBoxContainer/ScoreBox" unique_id=1567501547]
+layout_mode = 2
+
+[node name="GridContainer" type="GridContainer" parent="Control/LeftHUD/MarginContainer/VBoxContainer" unique_id=1041031513]
+layout_mode = 2
+columns = 2
+
+[node name="BasicCoreText" type="Label" parent="Control/LeftHUD/MarginContainer/VBoxContainer/GridContainer" unique_id=395247910]
+layout_mode = 2
+text = "BASIC CORES"
+
+[node name="BasicCoreValue" type="Label" parent="Control/LeftHUD/MarginContainer/VBoxContainer/GridContainer" unique_id=1303732170]
+layout_mode = 2
+
+[node name="RareCoreText" type="Label" parent="Control/LeftHUD/MarginContainer/VBoxContainer/GridContainer" unique_id=990995330]
+layout_mode = 2
+text = "RARE CORES"
+
+[node name="RareCoreValue" type="Label" parent="Control/LeftHUD/MarginContainer/VBoxContainer/GridContainer" unique_id=541629792]
+layout_mode = 2
+
+[node name="Spacer" type="Control" parent="Control/LeftHUD/MarginContainer/VBoxContainer" unique_id=397635981]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ControlBox" type="PanelContainer" parent="Control/LeftHUD/MarginContainer/VBoxContainer" unique_id=522518712]
+layout_mode = 2
+
+[node name="RightHUD" type="PanelContainer" parent="Control" unique_id=206827249]
+layout_mode = 0
+offset_left = 970.0
+offset_top = 60.0
+offset_right = 1250.0
+offset_bottom = 660.0
+
+[node name="MarginContainer" type="MarginContainer" parent="Control/RightHUD" unique_id=2068732970]
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Control/RightHUD/MarginContainer" unique_id=624544629]
+layout_mode = 2
+
+[node name="HeaderLabel" type="Label" parent="Control/RightHUD/MarginContainer/VBoxContainer" unique_id=1031405768]
+layout_mode = 2
+text = "AI Player"
+horizontal_alignment = 1
+
+[node name="Label" type="Label" parent="Control/RightHUD/MarginContainer/VBoxContainer" unique_id=322972866]
+layout_mode = 2
+text = "MATCH: 0 pts"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="Control/RightHUD/MarginContainer/VBoxContainer" unique_id=1724665016]
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Control/RightHUD/MarginContainer/VBoxContainer" unique_id=378944135]
+layout_mode = 2
+
+[node name="RoundScoreLabel" type="Label" parent="Control/RightHUD/MarginContainer/VBoxContainer/VBoxContainer" unique_id=101639307]
+layout_mode = 2
+
+[node name="CellCountLabel" type="Label" parent="Control/RightHUD/MarginContainer/VBoxContainer/VBoxContainer" unique_id=908260688]
+layout_mode = 2
+
+[node name="ProgressBar" type="ProgressBar" parent="Control/RightHUD/MarginContainer/VBoxContainer/VBoxContainer" unique_id=1060884079]
+layout_mode = 2
+
+[node name="GridContainer" type="GridContainer" parent="Control/RightHUD/MarginContainer/VBoxContainer" unique_id=728146728]
+layout_mode = 2
+columns = 2
+
+[node name="BasicCoreText" type="Label" parent="Control/RightHUD/MarginContainer/VBoxContainer/GridContainer" unique_id=92155709]
+layout_mode = 2
+text = "BASIC CORE"
+
+[node name="BasicCoreValue" type="Label" parent="Control/RightHUD/MarginContainer/VBoxContainer/GridContainer" unique_id=554890938]
+layout_mode = 2
+
+[node name="RareCoreText" type="Label" parent="Control/RightHUD/MarginContainer/VBoxContainer/GridContainer" unique_id=2112054536]
+layout_mode = 2
+text = "RARE CORES"
+
+[node name="RareCoreValue" type="Label" parent="Control/RightHUD/MarginContainer/VBoxContainer/GridContainer" unique_id=820051038]
+layout_mode = 2
+
+[node name="Control" type="Control" parent="Control/RightHUD/MarginContainer/VBoxContainer" unique_id=1256396060]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="TelemetryBox" type="PanelContainer" parent="Control/RightHUD/MarginContainer/VBoxContainer" unique_id=646683885]
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Control/RightHUD/MarginContainer/VBoxContainer/TelemetryBox" unique_id=1676602628]
+layout_mode = 2
+
+[node name="TelemetryHeader" type="Label" parent="Control/RightHUD/MarginContainer/VBoxContainer/TelemetryBox/VBoxContainer" unique_id=1231985108]
+layout_mode = 2
+text = "AI STATS"
+horizontal_alignment = 1
+
+[node name="DepthLabel" type="Label" parent="Control/RightHUD/MarginContainer/VBoxContainer/TelemetryBox/VBoxContainer" unique_id=1043180785]
+layout_mode = 2
+text = "Search Depth: 0"
+
+[node name="SpeedLabel" type="Label" parent="Control/RightHUD/MarginContainer/VBoxContainer/TelemetryBox/VBoxContainer" unique_id=352079798]
+layout_mode = 2
+text = "Speed: 0ms/tick"
+
+[node name="NodeCountLabel" type="Label" parent="Control/RightHUD/MarginContainer/VBoxContainer/TelemetryBox/VBoxContainer" unique_id=797085138]
+layout_mode = 2
+text = "Nodes: 0"
+
+[node name="TopHUD" type="HBoxContainer" parent="Control" unique_id=1626270429]
+visible = false
+layout_mode = 0
+offset_left = 340.0
+offset_top = 15.0
+offset_right = 940.0
+offset_bottom = 55.0
+
+[node name="RoundLabel" type="Label" parent="Control/TopHUD" unique_id=196137577]
+layout_mode = 2
+text = "ROUND 0/5"
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Control/TopHUD" unique_id=915690530]
+layout_mode = 2
+
+[node name="Control" type="Control" parent="Control/TopHUD" unique_id=1084790391]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="Control/TopHUD" unique_id=209003051]
+layout_mode = 2
+text = "00:00"

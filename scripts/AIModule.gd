@@ -19,10 +19,17 @@ const DIRECTIONS = [
 var grid_width: int = 20
 var grid_height: int = 20
 
+var last_depth: int = 0
+var last_nodes_evaluated: int = 0
+var nodes_count_in_search: int = 0
+
 # Main AI Entry Routine (Called by the Coordinator on the AI's Tick)
 func get_best_move(current_state: Dictionary, time_limit_ms: float) -> Vector2i:
+	nodes_count_in_search = 0
 	var legal_moves = get_legal_moves(current_state, true)
 	if legal_moves.is_empty():
+		last_depth = 1
+		last_nodes_evaluated = 0
 		return Vector2i.RIGHT # Trapped anyway, default backup
 		
 	var best_move: Vector2i = legal_moves[0] # Fallback
@@ -42,10 +49,13 @@ func get_best_move(current_state: Dictionary, time_limit_ms: float) -> Vector2i:
 		else:
 			break # Stop search immediately if budget blown
 			
+	last_depth = depth - 1
+	last_nodes_evaluated = nodes_count_in_search
 	return best_move
 
 # Alpha-Beta Minimax Core
 func alpha_beta_search(state: Dictionary, depth: int, alpha: float, beta: float, is_max: bool, start_time: float, time_limit: float) -> Dictionary:
+	nodes_count_in_search += 1
 	# 1. Real-time budget tracking
 	if (Time.get_ticks_msec() - start_time) >= time_limit:
 		return {"move": Vector2i.ZERO, "score": TIMEOUT_SIGNAL}
