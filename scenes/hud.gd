@@ -1,5 +1,15 @@
 extends CanvasLayer
 
+signal play_again_requested
+signal main_menu_requested
+
+var countdown_overlay: Control
+var countdown_label: Label
+var countdown_round_label: Label
+
+var post_round_overlay: Control
+var post_game_overlay: Control
+
 var left_match_label: Label
 var left_round_label: Label
 var left_cells_label: Label
@@ -405,3 +415,337 @@ func update_ai_telemetry(depth: int, time_ms: float, nodes: int) -> void:
 	ai_depth.text = "Search Depth: %d" % depth
 	ai_speed.text = "Speed: %.1f ms" % time_ms
 	ai_nodes.text = "Nodes: %d" % nodes
+
+func setup_countdown_overlay() -> void:
+	countdown_overlay = Control.new()
+	countdown_overlay.name = "CountdownOverlay"
+	countdown_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	countdown_overlay.visible = false
+	add_child(countdown_overlay)
+	
+	# Fullscreen dark glass overlay
+	var bg = ColorRect.new()
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.color = Color(0.03, 0.04, 0.06, 0.8) # 80% opacity dark blue-gray
+	countdown_overlay.add_child(bg)
+	
+	var vbox = VBoxContainer.new()
+	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_theme_constant_override("separation", 20)
+	countdown_overlay.add_child(vbox)
+	
+	countdown_round_label = Label.new()
+	countdown_round_label.text = "ROUND 1"
+	countdown_round_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	countdown_round_label.add_theme_color_override("font_color", Color("#00f0ff")) # Neon cyan
+	countdown_round_label.add_theme_font_size_override("font_size", 36)
+	vbox.add_child(countdown_round_label)
+	
+	var prep_lbl = Label.new()
+	prep_lbl.text = "GET READY..."
+	prep_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	prep_lbl.add_theme_color_override("font_color", Color("#a0a5b5"))
+	prep_lbl.add_theme_font_size_override("font_size", 18)
+	vbox.add_child(prep_lbl)
+	
+	countdown_label = Label.new()
+	countdown_label.text = "3"
+	countdown_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	countdown_label.add_theme_color_override("font_color", Color("#ff2a7a")) # Neon pink
+	countdown_label.add_theme_font_size_override("font_size", 84)
+	countdown_label.pivot_offset = Vector2(100, 100) # Ensure scaling anchors to center
+	vbox.add_child(countdown_label)
+
+func start_round_countdown(round_num: int, callback: Callable) -> void:
+	if countdown_overlay == null:
+		setup_countdown_overlay()
+		
+	countdown_round_label.text = "ROUND %d" % round_num
+	countdown_label.text = "3"
+	countdown_label.add_theme_color_override("font_color", Color("#ff2a7a"))
+	countdown_overlay.visible = true
+	
+	# Pulse "3"
+	var tween = create_tween()
+	countdown_label.scale = Vector2.ONE
+	tween.tween_property(countdown_label, "scale", Vector2(1.3, 1.3), 0.1)
+	tween.tween_property(countdown_label, "scale", Vector2(1.0, 1.0), 0.4)
+	
+	await get_tree().create_timer(1.0).timeout
+	countdown_label.text = "2"
+	var tween2 = create_tween()
+	countdown_label.scale = Vector2.ONE
+	tween2.tween_property(countdown_label, "scale", Vector2(1.3, 1.3), 0.1)
+	tween2.tween_property(countdown_label, "scale", Vector2(1.0, 1.0), 0.4)
+	
+	await get_tree().create_timer(1.0).timeout
+	countdown_label.text = "1"
+	var tween3 = create_tween()
+	countdown_label.scale = Vector2.ONE
+	tween3.tween_property(countdown_label, "scale", Vector2(1.3, 1.3), 0.1)
+	tween3.tween_property(countdown_label, "scale", Vector2(1.0, 1.0), 0.4)
+	
+	await get_tree().create_timer(1.0).timeout
+	countdown_label.text = "GO!"
+	countdown_label.add_theme_color_override("font_color", Color("#00f0ff"))
+	var tween4 = create_tween()
+	countdown_label.scale = Vector2.ONE
+	tween4.tween_property(countdown_label, "scale", Vector2(1.8, 1.8), 0.1)
+	tween4.tween_property(countdown_label, "scale", Vector2(1.0, 1.0), 0.4)
+	
+	await get_tree().create_timer(0.8).timeout
+	countdown_overlay.visible = false
+	callback.call()
+
+func setup_post_round_overlay() -> void:
+	post_round_overlay = Control.new()
+	post_round_overlay.name = "PostRoundOverlay"
+	post_round_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	post_round_overlay.visible = false
+	add_child(post_round_overlay)
+	
+	var bg = ColorRect.new()
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.color = Color(0.03, 0.04, 0.06, 0.85)
+	post_round_overlay.add_child(bg)
+
+func show_round_results(round_num: int, winner_type: String, winner_text: String, p1_round_pts: int, ai_round_pts: int, p1_cells: int, ai_cells: int, p1_basic: int, p1_rare: int, ai_basic: int, ai_rare: int, callback: Callable) -> void:
+	if post_round_overlay == null:
+		setup_post_round_overlay()
+		
+	# Clear children of overlay except BG
+	for child in post_round_overlay.get_children():
+		if child != post_round_overlay.get_child(0):
+			child.queue_free()
+			
+	var vbox = VBoxContainer.new()
+	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_theme_constant_override("separation", 20)
+	post_round_overlay.add_child(vbox)
+	
+	var title = Label.new()
+	title.text = "ROUND %d COMPLETE" % round_num
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_color_override("font_color", Color("#a0a5b5"))
+	title.add_theme_font_size_override("font_size", 24)
+	vbox.add_child(title)
+	
+	var announcement = Label.new()
+	announcement.text = winner_text.to_upper()
+	announcement.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	
+	var color = Color("#ffaa00") # gold for DRAW
+	if winner_type == "RED":
+		color = Color("#ff2a7a")
+	elif winner_type == "BLUE":
+		color = Color("#00f0ff")
+	announcement.add_theme_color_override("font_color", color)
+	announcement.add_theme_font_size_override("font_size", 32)
+	vbox.add_child(announcement)
+	
+	# Score Breakdown Panel
+	var panel = PanelContainer.new()
+	panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	var panel_style = StyleBoxFlat.new()
+	panel_style.bg_color = Color("#0c0e14")
+	panel_style.border_color = Color("#222736")
+	panel_style.set_border_width_all(1)
+	panel_style.set_corner_radius_all(8)
+	panel.add_theme_stylebox_override("panel", panel_style)
+	vbox.add_child(panel)
+	
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 25)
+	margin.add_theme_constant_override("margin_right", 25)
+	margin.add_theme_constant_override("margin_top", 15)
+	margin.add_theme_constant_override("margin_bottom", 15)
+	panel.add_child(margin)
+	
+	var grid = GridContainer.new()
+	grid.columns = 3
+	grid.add_theme_constant_override("h_separation", 40)
+	grid.add_theme_constant_override("v_separation", 10)
+	margin.add_child(grid)
+	
+	# Headers
+	grid.add_child(Control.new())
+	
+	var h_p1 = Label.new()
+	h_p1.text = "PLAYER 1"
+	h_p1.add_theme_color_override("font_color", Color("#ff2a7a"))
+	h_p1.add_theme_font_size_override("font_size", 14)
+	grid.add_child(h_p1)
+	
+	var h_ai = Label.new()
+	h_ai.text = "BLUE AI"
+	h_ai.add_theme_color_override("font_color", Color("#00f0ff"))
+	h_ai.add_theme_font_size_override("font_size", 14)
+	grid.add_child(h_ai)
+	
+	# Rows
+	add_breakdown_row(grid, "Captured Cells:", "%d (+%d)" % [p1_cells, p1_cells], "%d (+%d)" % [ai_cells, ai_cells])
+	add_breakdown_row(grid, "Basic Cores:", "%d (+%d)" % [p1_basic, p1_basic * 5], "%d (+%d)" % [ai_basic, ai_basic * 5])
+	add_breakdown_row(grid, "Rare Cores:", "%d (+%d)" % [p1_rare, p1_rare * 10], "%d (+%d)" % [ai_rare, ai_rare * 10])
+	
+	var p1_bonus = 50 if winner_type == "RED" else (25 if winner_type == "DRAW" else 0)
+	var ai_bonus = 50 if winner_type == "BLUE" else (25 if winner_type == "DRAW" else 0)
+	add_breakdown_row(grid, "Round Bonus:", "+%d" % p1_bonus, "+%d" % ai_bonus)
+	add_breakdown_row(grid, "Round Total:", "%d pts" % p1_round_pts, "%d pts" % ai_round_pts, true)
+	
+	var next_lbl = Label.new()
+	next_lbl.text = "PREPARING NEXT ROUND..."
+	next_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	next_lbl.add_theme_color_override("font_color", Color("#606575"))
+	next_lbl.add_theme_font_size_override("font_size", 14)
+	vbox.add_child(next_lbl)
+	
+	post_round_overlay.visible = true
+	
+	# Wait for 3 seconds, then callback
+	await get_tree().create_timer(3.0).timeout
+	post_round_overlay.visible = false
+	callback.call()
+
+func add_breakdown_row(grid: GridContainer, label_text: String, p1_text: String, ai_text: String, bold: bool = false) -> void:
+	var lbl = Label.new()
+	lbl.text = label_text
+	lbl.add_theme_color_override("font_color", Color("#a0a5b5") if not bold else Color.WHITE)
+	lbl.add_theme_font_size_override("font_size", 13 if not bold else 14)
+	grid.add_child(lbl)
+	
+	var p1 = Label.new()
+	p1.text = p1_text
+	p1.add_theme_color_override("font_color", Color("#ff2a7a") if bold else Color.WHITE)
+	p1.add_theme_font_size_override("font_size", 13 if not bold else 14)
+	grid.add_child(p1)
+	
+	var ai = Label.new()
+	ai.text = ai_text
+	ai.add_theme_color_override("font_color", Color("#00f0ff") if bold else Color.WHITE)
+	ai.add_theme_font_size_override("font_size", 13 if not bold else 14)
+	grid.add_child(ai)
+
+func setup_post_game_overlay() -> void:
+	post_game_overlay = Control.new()
+	post_game_overlay.name = "PostGameOverlay"
+	post_game_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	post_game_overlay.visible = false
+	add_child(post_game_overlay)
+	
+	var bg = ColorRect.new()
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.color = Color(0.03, 0.04, 0.06, 0.9)
+	post_game_overlay.add_child(bg)
+
+func show_match_results(winner_type: String, winner_text: String, p1_total: int, ai_total: int) -> void:
+	if post_game_overlay == null:
+		setup_post_game_overlay()
+		
+	# Clear children of overlay except BG
+	for child in post_game_overlay.get_children():
+		if child != post_game_overlay.get_child(0):
+			child.queue_free()
+			
+	var vbox = VBoxContainer.new()
+	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_theme_constant_override("separation", 25)
+	post_game_overlay.add_child(vbox)
+	
+	var title = Label.new()
+	title.text = "MATCH COMPLETE"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_color_override("font_color", Color("#a0a5b5"))
+	title.add_theme_font_size_override("font_size", 28)
+	vbox.add_child(title)
+	
+	var champion = Label.new()
+	champion.text = winner_text.to_upper()
+	champion.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	
+	var color = Color("#ffaa00") # gold for draw
+	if winner_type == "RED":
+		color = Color("#ff2a7a")
+	elif winner_type == "BLUE":
+		color = Color("#00f0ff")
+	champion.add_theme_color_override("font_color", color)
+	champion.add_theme_font_size_override("font_size", 36)
+	vbox.add_child(champion)
+	
+	# Score display panel
+	var panel = PanelContainer.new()
+	panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	var panel_style = StyleBoxFlat.new()
+	panel_style.bg_color = Color("#0c0e14")
+	panel_style.border_color = color
+	panel_style.set_border_width_all(2)
+	panel_style.set_corner_radius_all(10)
+	panel_style.shadow_color = Color(color.r, color.g, color.b, 0.2)
+	panel_style.shadow_size = 12
+	panel.add_theme_stylebox_override("panel", panel_style)
+	vbox.add_child(panel)
+	
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 35)
+	margin.add_theme_constant_override("margin_right", 35)
+	margin.add_theme_constant_override("margin_top", 20)
+	margin.add_theme_constant_override("margin_bottom", 20)
+	panel.add_child(margin)
+	
+	var scores = Label.new()
+	scores.text = "PLAYER 1: %d pts   |   BLUE AI: %d pts" % [p1_total, ai_total]
+	scores.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	scores.add_theme_font_size_override("font_size", 20)
+	scores.add_theme_color_override("font_color", Color.WHITE)
+	margin.add_child(scores)
+	
+	var spacer = Control.new()
+	spacer.custom_minimum_size = Vector2(0, 10)
+	vbox.add_child(spacer)
+	
+	# Action buttons
+	var hbox = HBoxContainer.new()
+	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	hbox.add_theme_constant_override("separation", 30)
+	vbox.add_child(hbox)
+	
+	var again_btn = Button.new()
+	again_btn.text = "PLAY AGAIN"
+	again_btn.custom_minimum_size = Vector2(180, 45)
+	again_btn.pressed.connect(func():
+		post_game_overlay.visible = false
+		play_again_requested.emit()
+	)
+	hbox.add_child(again_btn)
+	
+	var menu_btn = Button.new()
+	menu_btn.text = "MAIN MENU"
+	menu_btn.custom_minimum_size = Vector2(180, 45)
+	menu_btn.pressed.connect(func():
+		post_game_overlay.visible = false
+		main_menu_requested.emit()
+	)
+	hbox.add_child(menu_btn)
+	
+	# Style buttons
+	var style_again = StyleBoxFlat.new()
+	style_again.bg_color = Color("#0c0e14")
+	style_again.border_color = Color("#ff2a7a")
+	style_again.set_border_width_all(1)
+	style_again.set_corner_radius_all(6)
+	
+	var style_menu = StyleBoxFlat.new()
+	style_menu.bg_color = Color("#0c0e14")
+	style_menu.border_color = Color("#00f0ff")
+	style_menu.set_border_width_all(1)
+	style_menu.set_corner_radius_all(6)
+	
+	again_btn.add_theme_stylebox_override("normal", style_again)
+	again_btn.add_theme_color_override("font_color", Color("#ff2a7a"))
+	
+	menu_btn.add_theme_stylebox_override("normal", style_menu)
+	menu_btn.add_theme_color_override("font_color", Color("#00f0ff"))
+	
+	post_game_overlay.visible = true

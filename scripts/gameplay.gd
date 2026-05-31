@@ -18,6 +18,8 @@ var max_rounds: int = 5
 var current_round: int = 1
 var p1_match_score: int = 0
 var p2_match_score: int = 0
+var match_total_cores: int = 0
+var match_total_cells: int = 0
 var round_history: Array = [] # Stores: "RED", "BLUE", or "DRAW"
 
 # Round specific metrics
@@ -142,15 +144,25 @@ func _ready() -> void:
 	# Spawn energy cores
 	spawn_initial_cores()
 	
+	# Search parent/sibling hierarchy for HUD CanvasLayer node and connect signals
+	hud = get_parent().get_node_or_null("HUD")
+	if hud != null:
+		hud.play_again_requested.connect(restart_match)
+		hud.main_menu_requested.connect(go_to_main_menu)
+		
 	# Update HUD live at the start (deferred so HUD's _ready() finishes building labels first)
 	call_deferred("update_hud")
 	
 	# Configure the Timer programmatically
 	tick_timer = Timer.new()
-	tick_timer.wait_time = 0.5 # Tick speed (lower = faster)
+	tick_timer.wait_time = 0.1 # Tick speed (lower = faster)
 	add_child(tick_timer)
 	tick_timer.timeout.connect(_on_tick_timer_timeout)
-	tick_timer.start()
+	
+	if hud != null:
+		hud.start_round_countdown(current_round, func(): tick_timer.start())
+	else:
+		tick_timer.start()
 
 func _on_tick_timer_timeout() -> void:
 	# Ticks & timer tracking
@@ -233,6 +245,9 @@ func _on_tick_timer_timeout() -> void:
 	
 	ai_player.grid_position = next_blue
 	ai_player.position = tile_to_pixel(next_blue)
+	
+	# Run enclosure flood algorithm
+	check_and_apply_enclosure_flood()
 	
 	# Update HUD scores & percentages continually
 	update_hud()
@@ -390,23 +405,58 @@ func handle_round_over(outcome: String, round_message: String) -> void:
 	p1_match_score += (r1_base + r1_bonus)
 	p2_match_score += (r2_base + r2_bonus)
 	
-	update_hud()
-	print(round_message)
+	# Accumulate match statistics
+	match_total_cores += p1_basic_cores + p1_rare_cores + p2_basic_cores + p2_rare_cores
+	match_total_cells += p1_captured_cells + p2_captured_cells
 	
-	if current_round < max_rounds:
-		print("PREPARING NEXT ROUND IN 2 SECONDS...")
-		await get_tree().create_timer(2.0).timeout
-		start_next_round()
+	update_hud()
+	
+	# Play post-round results display & then transition
+	if hud != null:
+		hud.show_round_results(
+			current_round,
+			outcome,
+			round_message,
+			r1_base + r1_bonus,
+			r2_base + r2_bonus,
+			p1_captured_cells,
+			p2_captured_cells,
+			p1_basic_cores,
+			p1_rare_cores,
+			p2_basic_cores,
+			p2_rare_cores,
+			func():
+				if current_round < max_rounds:
+					start_next_round()
+				else:
+					var grand_winner = ""
+					var grand_message = ""
+					if p1_match_score > p2_match_score:
+						grand_winner = "RED"
+						grand_message = "PLAYER 1 WINS THE MATCH!"
+					elif p2_match_score > p1_match_score:
+						grand_winner = "BLUE"
+						grand_message = "BLUE AI WINS THE MATCH!"
+					else:
+						grand_winner = "DRAW"
+						grand_message = "IT'S A GRAND DRAW!"
+						
+					# Save persistent database statistics
+					StatsManager.record_game_result(
+						p1_match_score,
+						p2_match_score,
+						grand_winner,
+						match_total_cores,
+						match_total_cells
+					)
+					
+					hud.show_match_results(grand_winner, grand_message, p1_match_score, p2_match_score)
+		)
 	else:
-		# Match complete! Determine the grand champion
-		var match_winner = ""
-		if p1_match_score > p2_match_score:
-			match_winner = "MATCH OVER! PLAYER 1 (RED) WINS THE MATCH! %d pts vs %d pts" % [p1_match_score, p2_match_score]
-		elif p2_match_score > p1_match_score:
-			match_winner = "MATCH OVER! BLUE AI WINS THE MATCH! %d pts vs %d pts" % [p2_match_score, p1_match_score]
-		else:
-			match_winner = "MATCH OVER! IT'S A GRAND DRAW! %d pts each!" % p1_match_score
-		print(match_winner)
+		# Fallback if HUD is null
+		await get_tree().create_timer(2.0).timeout
+		if current_round < max_rounds:
+			start_next_round()
 
 func start_next_round() -> void:
 	current_round += 1
@@ -464,5 +514,132 @@ func start_next_round() -> void:
 	# Update HUD
 	update_hud()
 	
-	# Start round ticking
-	tick_timer.start()
+	# Start round ticking with preparations countdown
+	if hud != null:
+		hud.start_round_countdown(current_round, func(): tick_timer.start())
+	else:
+		tick_timer.start()
+
+func check_and_apply_enclosure_flood() -> void:
+	var red_flooded_cells: Array[Vector2i] = []
+	var blue_flooded_cells: Array[Vector2i] = []
+
+	# 1. Scan Red's enclosures
+	var red_reachable = get_reachable_cells(player_red.grid_position, CellType.RED_TRAIL)
+	var red_candidates = get_unreachable_free_cells(red_reachable)
+	for cell in red_candidates:
+		if cell != player_red.grid_position and cell != ai_player.grid_position:
+			if touches_trail(cell, CellType.RED_TRAIL):
+				red_flooded_cells.append(cell)
+
+	# 2. Scan Blue's enclosures
+	var blue_reachable = get_reachable_cells(ai_player.grid_position, CellType.BLUE_TRAIL)
+	var blue_candidates = get_unreachable_free_cells(blue_reachable)
+	for cell in blue_candidates:
+		if cell != player_red.grid_position and cell != ai_player.grid_position:
+			if touches_trail(cell, CellType.BLUE_TRAIL):
+				blue_flooded_cells.append(cell)
+
+	# Apply floods
+	var flooded_any = false
+	if not red_flooded_cells.is_empty():
+		apply_flood(red_flooded_cells, "RED")
+		flooded_any = true
+	if not blue_flooded_cells.is_empty():
+		apply_flood(blue_flooded_cells, "BLUE")
+		flooded_any = true
+
+	if flooded_any:
+		update_hud()
+
+func get_reachable_cells(start_pos: Vector2i, blocking_trail_type: int) -> Dictionary:
+	var reachable = {}
+	var queue = [start_pos]
+	reachable[start_pos] = true
+	
+	while queue.size() > 0:
+		var curr = queue.pop_front()
+		for dir in [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
+			var neighbor = curr + dir
+			if neighbor.x < 0 or neighbor.x >= grid_width or neighbor.y < 0 or neighbor.y >= grid_height:
+				continue
+			if reachable.has(neighbor):
+				continue
+				
+			var type = grid_matrix[neighbor.x][neighbor.y]
+			# The search can traverse anything EXCEPT the player's own trail and permanent walls.
+			if type != blocking_trail_type and type != CellType.WALL:
+				reachable[neighbor] = true
+				queue.append(neighbor)
+				
+	return reachable
+
+func get_unreachable_free_cells(reachable: Dictionary) -> Array[Vector2i]:
+	var unreachable: Array[Vector2i] = []
+	for x in range(grid_width):
+		for y in range(grid_height):
+			var pos = Vector2i(x, y)
+			var type = grid_matrix[x][y]
+			var is_free = type == CellType.EMPTY or type == CellType.ENERGY_CORE or type == CellType.RARE_ENERGY_CORE
+			if is_free and not reachable.has(pos):
+				unreachable.append(pos)
+	return unreachable
+
+func touches_trail(pos: Vector2i, trail_type: int) -> bool:
+	for dir in [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
+		var neighbor = pos + dir
+		if neighbor.x >= 0 and neighbor.x < grid_width and neighbor.y >= 0 and neighbor.y < grid_height:
+			if grid_matrix[neighbor.x][neighbor.y] == trail_type:
+				return true
+	return false
+
+func apply_flood(cells: Array[Vector2i], player_type: String) -> void:
+	var trail_type = CellType.RED_TRAIL if player_type == "RED" else CellType.BLUE_TRAIL
+	var source_id = 2 if player_type == "RED" else 3
+	var player = player_red if player_type == "RED" else ai_player
+	
+	var cores_eaten = 0
+	var rare_cores_eaten = 0
+	
+	# First pass: remove cores and update matrix + tilemap
+	for cell in cells:
+		var type = grid_matrix[cell.x][cell.y]
+		if type == CellType.ENERGY_CORE or type == CellType.RARE_ENERGY_CORE:
+			var is_rare = type == CellType.RARE_ENERGY_CORE
+			if is_rare:
+				rare_cores_eaten += 1
+			else:
+				cores_eaten += 1
+				
+			if active_cores.has(cell):
+				var node = active_cores[cell]
+				if is_instance_valid(node):
+					node.queue_free()
+				active_cores.erase(cell)
+				
+		grid_matrix[cell.x][cell.y] = trail_type
+		grid_layer.set_cell(cell, source_id, Vector2i(0, 0))
+		player.body_segments.append(cell)
+		
+	# Second pass: credit core points & spawn replacements
+	if player_type == "RED":
+		p1_basic_cores += cores_eaten
+		p1_rare_cores += rare_cores_eaten
+	else:
+		p2_basic_cores += cores_eaten
+		p2_rare_cores += rare_cores_eaten
+		
+	for i in range(cores_eaten + rare_cores_eaten):
+		spawn_energy_core(randf() < 0.25)
+
+func restart_match() -> void:
+	current_round = 0
+	p1_match_score = 0
+	p2_match_score = 0
+	match_total_cores = 0
+	match_total_cells = 0
+	round_history.clear()
+	start_next_round()
+
+func go_to_main_menu() -> void:
+	get_tree().change_scene_to_file("res://scenes/menu/main_menu.tscn")

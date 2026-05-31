@@ -1,0 +1,86 @@
+[gd_scene load_steps=4 format=3 uid="uid://beqca4d46sap8"]
+
+[ext_resource type="Script" path="res://scenes/menu/main_menu.gd" id="1_main_menu_script"]
+[ext_resource type="FontFile" uid="uid://c1oqh1ktsv8po" path="res://assets/fonts/LEDCalculator.ttf" id="1_nl8w3"]
+[ext_resource type="FontFile" uid="uid://cyie71cpqoh45" path="res://assets/fonts/TRS-Million Rg.otf" id="2_3rkf3"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_247la"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_3rkf3"]
+font = ExtResource("1_nl8w3")
+font_size = 64
+
+[node name="MainMenuScreen" type="CanvasLayer" unique_id=763482701]
+script = ExtResource("1_main_menu_script")
+
+[node name="Control" type="Control" parent="." unique_id=1353223675]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 1280.0
+offset_bottom = 720.0
+
+[node name="Panel" type="Panel" parent="Control" unique_id=1695618329]
+layout_mode = 0
+offset_right = 1280.0
+offset_bottom = 720.0
+
+[node name="PanelContainer" type="PanelContainer" parent="Control/Panel" unique_id=487070719]
+layout_mode = 0
+offset_left = 60.0
+offset_top = 60.0
+offset_right = 780.0
+offset_bottom = 210.0
+theme_override_styles/panel = SubResource("StyleBoxEmpty_247la")
+
+[node name="Label" type="Label" parent="Control/Panel/PanelContainer" unique_id=2042471775]
+layout_mode = 2
+text = "COLOR GRID CLASH"
+label_settings = SubResource("LabelSettings_3rkf3")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Control/Panel" unique_id=1689160189]
+layout_mode = 0
+offset_left = 60.0
+offset_top = 210.0
+offset_right = 100.0
+offset_bottom = 250.0
+
+[node name="StartButton" type="Button" parent="Control/Panel/VBoxContainer" unique_id=1945063328]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_3rkf3")
+theme_override_font_sizes/font_size = 24
+text = "START GAME"
+alignment = 0
+
+[node name="ControlsButton" type="Button" parent="Control/Panel/VBoxContainer" unique_id=184920053]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_3rkf3")
+theme_override_font_sizes/font_size = 24
+text = "CONTROLS"
+alignment = 0
+
+[node name="RulesButton" type="Button" parent="Control/Panel/VBoxContainer" unique_id=600269314]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_3rkf3")
+theme_override_font_sizes/font_size = 24
+text = "RULES AND MECHANICS"
+alignment = 0
+
+[node name="StatsButton" type="Button" parent="Control/Panel/VBoxContainer" unique_id=971277413]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_3rkf3")
+theme_override_font_sizes/font_size = 24
+text = "STATISTICS"
+alignment = 0
+
+[node name="QuitButton" type="Button" parent="Control/Panel/VBoxContainer" unique_id=75112816]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_3rkf3")
+theme_override_font_sizes/font_size = 24
+text = "QUIT"
+alignment = 0
+
+[node name="DisplayPanel" type="Panel" parent="." unique_id=731169241]
+offset_left = 480.0
+offset_top = 210.0
+offset_right = 1200.0
+offset_bottom = 630.0
