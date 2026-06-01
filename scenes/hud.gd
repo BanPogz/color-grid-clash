@@ -710,7 +710,7 @@ func show_round_results(round_num: int, winner_type: String, winner_text: String
 	if is_ai_vs_ai:
 		next_lbl.text = "PREPARING NEXT ROUND..."
 	else:
-		next_lbl.text = "PRESS ANY CONTROL KEY TO START NEXT ROUND"
+		next_lbl.text = "PRESS ANY CONTROL KEY TO START NEXT ROUND\n[ ESCAPE / BACK TO FORFEIT MATCH ]"
 	next_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	if is_ai_vs_ai:
 		next_lbl.add_theme_color_override("font_color", Color("#606575"))
@@ -994,14 +994,27 @@ func hide_pause_menu() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if waiting_for_continue:
+		if event.is_action_pressed("ui_cancel"):
+			var vp = get_viewport()
+			if vp != null:
+				vp.set_input_as_handled()
+			waiting_for_continue = false
+			post_round_overlay.visible = false
+			main_menu_requested.emit() # Forfeit the match!
+			return
+			
 		if (event is InputEventKey or event is InputEventJoypadButton or event is InputEventMouseButton) and event.is_pressed():
+			var vp = get_viewport()
+			if vp != null:
+				vp.set_input_as_handled()
 			waiting_for_continue = false
 			post_round_overlay.visible = false
 			continue_callback.call()
-			get_viewport().set_input_as_handled()
 			return
 			
 	if pause_overlay != null and pause_overlay.visible:
 		if event.is_action_pressed("pause_game") or event.is_action_pressed("ui_cancel"):
-			get_viewport().set_input_as_handled()
+			var vp = get_viewport()
+			if vp != null:
+				vp.set_input_as_handled()
 			resume_requested.emit()
