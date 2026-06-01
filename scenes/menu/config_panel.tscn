@@ -1,0 +1,12 @@
+[gd_scene format=3 uid="uid://bfb3nrmk7y1p5"]
+
+[ext_resource type="Script" uid="uid://bx124gag6wwb7" path="res://scenes/menu/config_panel.gd" id="1_c6y1p"]
+
+[node name="ConfigPanel" type="Control" unique_id=737986987]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_c6y1p")

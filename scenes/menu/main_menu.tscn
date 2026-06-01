@@ -51,13 +51,6 @@ theme_override_font_sizes/font_size = 24
 text = "START GAME"
 alignment = 0
 
-[node name="ConfigButton" type="Button" parent="Control/Panel/VBoxContainer" unique_id=1216769904]
-layout_mode = 2
-theme_override_fonts/font = ExtResource("2_3rkf3")
-theme_override_font_sizes/font_size = 24
-text = "Configuration"
-alignment = 0
-
 [node name="ControlsButton" type="Button" parent="Control/Panel/VBoxContainer" unique_id=184920053]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_3rkf3")
@@ -77,6 +70,13 @@ layout_mode = 2
 theme_override_fonts/font = ExtResource("2_3rkf3")
 theme_override_font_sizes/font_size = 24
 text = "STATISTICS"
+alignment = 0
+
+[node name="ConfigButton" type="Button" parent="Control/Panel/VBoxContainer" unique_id=1216769904]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_3rkf3")
+theme_override_font_sizes/font_size = 24
+text = "Configuration"
 alignment = 0
 
 [node name="QuitButton" type="Button" parent="Control/Panel/VBoxContainer" unique_id=75112816]

@@ -143,7 +143,7 @@ func _ready() -> void:
 	grid_layer.set_cell(red_spawn_pos, 2, Vector2i(0, 0))
 	grid_layer.set_cell(blue_spawn_pos, 3, Vector2i(0, 0))
 	
-	generate_random_walls(randf_range(0.05, 0.10)) # 5-10% static walls
+	generate_random_walls(ConfigManager.get_wall_density()) # configured static walls
 	
 	# Spawn energy cores
 	spawn_initial_cores()
@@ -159,12 +159,19 @@ func _ready() -> void:
 			restart_match()
 		)
 		
+	max_rounds = ConfigManager.max_rounds
+	
+	if ConfigManager.timer_mode == ConfigManager.TimerMode.INFINITE:
+		round_timer_elapsed = 0
+	else:
+		round_timer_elapsed = ConfigManager.round_time_limit
+		
 	# Update HUD live at the start (deferred so HUD's _ready() finishes building labels first)
 	call_deferred("update_hud")
 	
 	# Configure the Timer programmatically
 	tick_timer = Timer.new()
-	tick_timer.wait_time = 0.05 # Tick speed (lower = faster)
+	tick_timer.wait_time = ConfigManager.tick_speed # Configured tick speed
 	add_child(tick_timer)
 	tick_timer.timeout.connect(_on_tick_timer_timeout)
 	
@@ -184,9 +191,19 @@ func _ready() -> void:
 
 func _on_round_clock_timer_timeout() -> void:
 	if current_round_active:
-		round_timer_elapsed += 1
-		if hud != null:
-			hud.update_timer(round_timer_elapsed)
+		if ConfigManager.timer_mode == ConfigManager.TimerMode.INFINITE:
+			round_timer_elapsed += 1
+			if hud != null:
+				hud.update_timer(round_timer_elapsed)
+		else:
+			# LIMITED Countdown Timer Mode
+			if round_timer_elapsed > 0:
+				round_timer_elapsed -= 1
+				if hud != null:
+					hud.update_timer(round_timer_elapsed)
+				if round_timer_elapsed == 0:
+					# TIME EXPIRED! End the round in a DRAW!
+					handle_round_over("DRAW", "TIME EXPIRED! IT'S A DRAW!")
 
 func _on_tick_timer_timeout() -> void:
 	# Ticks & timer tracking
@@ -204,16 +221,25 @@ func _on_tick_timer_timeout() -> void:
 		"blue_trail_count": ai_player.body_segments.size() + 1
 	}
 	
-	var start_think_time = Time.get_ticks_msec()
-	var blue_dir = ai_player.think_and_decide(current_state_data)
-	var end_think_time = Time.get_ticks_msec()
-	var think_time_ms = end_think_time - start_think_time
+	if ConfigManager.player_setup == ConfigManager.PlayerSetup.AI_VS_AI and player_red.has_method("think_and_decide"):
+		red_dir = player_red.think_and_decide(current_state_data)
+	
+	var blue_dir = ai_player.current_direction
+	var think_time_ms = 0.0
+	if ConfigManager.player_setup != ConfigManager.PlayerSetup.P_VS_P:
+		var start_think_time = Time.get_ticks_msec()
+		blue_dir = ai_player.think_and_decide(current_state_data)
+		var end_think_time = Time.get_ticks_msec()
+		think_time_ms = end_think_time - start_think_time
 	
 	# Update Minimax telemetry stats on HUD
-	if hud != null and ai_player.ai_module != null:
-		var last_depth = ai_player.ai_module.last_depth
-		var last_nodes = ai_player.ai_module.last_nodes_evaluated
-		hud.update_ai_telemetry(last_depth, think_time_ms, last_nodes)
+	if hud != null:
+		if ai_player.ai_module != null and ConfigManager.player_setup != ConfigManager.PlayerSetup.P_VS_P:
+			var last_depth = ai_player.ai_module.last_depth
+			var last_nodes = ai_player.ai_module.last_nodes_evaluated
+			hud.update_ai_telemetry(last_depth, think_time_ms, last_nodes)
+		else:
+			hud.update_ai_telemetry(0, 0.0, 0)
 	
 	# 2. Compute candidate positions
 	var next_red = player_red.grid_position + red_dir
@@ -267,7 +293,8 @@ func _on_tick_timer_timeout() -> void:
 	ai_player.position = tile_to_pixel(next_blue)
 	
 	# Run enclosure flood algorithm
-	check_and_apply_enclosure_flood()
+	if ConfigManager.flood_fill_enabled:
+		check_and_apply_enclosure_flood()
 	
 	# Update HUD scores & percentages continually
 	update_hud()
@@ -292,10 +319,12 @@ func update_logical_matrix(player: BasePlayer, new_pos: Vector2i, type: String) 
 	grid_layer.set_cell(old_pos, source_id, Vector2i(0, 0))
 
 func spawn_initial_cores() -> void:
-	# Standard core layout: 2 basic cores, 1 rare core
-	spawn_energy_core(false)
-	spawn_energy_core(false)
-	spawn_energy_core(true)
+	var basic_count = ConfigManager.get_basic_cores_count()
+	var rare_count = ConfigManager.get_rare_cores_count()
+	for i in range(basic_count):
+		spawn_energy_core(false)
+	for i in range(rare_count):
+		spawn_energy_core(true)
 
 func spawn_energy_core(is_rare: bool) -> void:
 	var attempts = 0
@@ -518,7 +547,12 @@ func start_next_round() -> void:
 	p2_rare_cores = 0
 	p1_captured_cells = 0
 	p2_captured_cells = 0
-	round_timer_elapsed = 0
+	
+	if ConfigManager.timer_mode == ConfigManager.TimerMode.INFINITE:
+		round_timer_elapsed = 0
+	else:
+		round_timer_elapsed = ConfigManager.round_time_limit
+		
 	tick_count = 0
 	
 	player_red.body_segments.clear()
@@ -541,7 +575,7 @@ func start_next_round() -> void:
 	grid_layer.set_cell(blue_spawn_pos, 3, Vector2i(0, 0))
 	
 	# Regenerate static walls
-	generate_random_walls(randf_range(0.05, 0.10))
+	generate_random_walls(ConfigManager.get_wall_density())
 	
 	# Spawn energy cores
 	spawn_initial_cores()

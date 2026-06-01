@@ -550,6 +550,41 @@ We have completed another round of critical polish to elevate visual legibility 
   * Reverted `Gameplay`'s process mode to default, restoring full Godot pausing to freeze all game step timers and players completely.
   * Transferred unhandled pause inputs (Escape / Joypad B / Start) during freezes to `hud.gd`. Since `hud.gd` is always processing (`process_mode = ALWAYS`), it safely captures unpause commands while the game is frozen and triggers `resume_requested` to unpause the engine tree.
 
+---
+
+## ⚙️ Dynamic System Configuration Dashboard
+
+We have implemented a fully interactive **System Configuration** screen accessible directly from the Main Menu, allowing players to customize the match parameters dynamically:
+
+### 1. Customizable Game Parameters
+* **Player Setup Mode**:
+  * **Player vs. AI (Default)**: Play against the advanced minimax snek.
+  * **Player vs. Player (PvP)**: Play locally against another human. Player 1 uses the WASD keys (configured as `p1_move` in the Godot Input Map), while Player 2 uses the Arrow Keys (configured as `p2_move`).
+  * **AI vs. AI (Watch Mode)**: Watch two automated minimax search agents compete against each other.
+* **Match Rounds**: Set the match length to anywhere between `1` and `10` rounds per game.
+* **Game Movement Speed**:
+  * **Slow**: `0.50s` game loop tick speed.
+  * **Intermediate**: `0.10s` game loop tick speed.
+  * **Fast**: `0.05s` game loop tick speed.
+* **Clock Mode & Round Time Limit**:
+  * **Infinite (No Time Limit)**: The match clock increments upward from `00:00` with no time restrictions.
+  * **Limited (Countdown)**: The match clock decrements downward from a customized limit (up to `3 minutes / 180s`). If the timer expires before a clash, the round terminates in a **DRAW** with no winner.
+* **Obstacle Wall Density**:
+  * **None**: `0%` of grid space covered by permanent walls.
+  * **Less**: Between `5%` and `10%` grid density.
+  * **More**: Between `11%` and `20%` grid density.
+* **Energy Cores Count**:
+  * **None**: `0` active energy cores.
+  * **Less**: `2` standard cores and `1` rare core spawned simultaneously on the grid.
+  * **More**: `4` standard cores and `2` rare cores spawned simultaneously on the grid.
+* **Enclosure Flood Fill**: Toggle to **Enable** or **Disable** the programmatic flood fill system.
+
+### 2. Main Menu UI Integration
+* **Sleek Cybernetic Button**: Programmatically instantiates the `CONFIGURATION` button directly into the Main Menu sidebar, positioned seamlessly above `QUIT`.
+* **Harmonious Theme**: Styled with the custom-themed space charcoal normal state and glowing neon-cyan border focus/hover state to match other sidebar buttons.
+* **Robust Input Flow**: Fully compatible with keyboard (Arrow keys/WASD/Enter) and controller D-pad / Joystick navigation, automatically grabbing focus when the screen loads and allowing quick dismissal back to the welcome screen with `Escape` / `B` / `Circle`.
+
+
 
 
 

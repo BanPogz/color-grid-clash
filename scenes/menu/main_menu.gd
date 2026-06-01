@@ -7,17 +7,24 @@ extends CanvasLayer
 @onready var rules_button = $Control/Panel/VBoxContainer/RulesButton
 @onready var stats_button = $Control/Panel/VBoxContainer/StatsButton
 @onready var quit_button = $Control/Panel/VBoxContainer/QuitButton
+@onready var config_button = $Control/Panel/VBoxContainer/ConfigButton
 
 var controls_scene = preload("res://scenes/menu/controls_map.tscn")
 var rules_scene = preload("res://scenes/menu/rules_and_mechanics.tscn")
 var stats_scene = preload("res://scenes/menu/stats.tscn")
+var config_scene = preload("res://scenes/menu/config_panel.tscn")
 var quit_scene = preload("res://scenes/menu/quit.tscn")
 
 func _ready() -> void:
+	# Ensure the existing button text is in uppercase to match other buttons
+	config_button.text = "CONFIGURATION"
+	config_button.custom_minimum_size = Vector2(0, 35) # match other buttons
+	
 	start_button.pressed.connect(_on_start_pressed)
 	controls_button.pressed.connect(_on_controls_pressed)
 	rules_button.pressed.connect(_on_rules_pressed)
 	stats_button.pressed.connect(_on_stats_pressed)
+	config_button.pressed.connect(_on_config_pressed)
 	quit_button.pressed.connect(_on_quit_pressed)
 	
 	# Apply gorgeous neon theme styling programmatically
@@ -49,7 +56,7 @@ func setup_styling() -> void:
 	display_panel.add_theme_stylebox_override("panel", display_style)
 	
 	# Style buttons
-	var buttons = [start_button, controls_button, rules_button, stats_button, quit_button]
+	var buttons = [start_button, controls_button, rules_button, stats_button, config_button, quit_button]
 	for btn in buttons:
 		# Gorgeous cybernetic buttons
 		var btn_normal = StyleBoxFlat.new()
@@ -91,6 +98,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				rules_button.grab_focus()
 			elif active_child.name == "StatsPanel":
 				stats_button.grab_focus()
+			elif active_child.name == "ConfigPanel":
+				config_button.grab_focus()
 			elif active_child.name == "QuitPanel":
 				quit_button.grab_focus()
 			else:
@@ -115,6 +124,11 @@ func _on_rules_pressed() -> void:
 func _on_stats_pressed() -> void:
 	var inst = stats_scene.instantiate()
 	inst.name = "StatsPanel"
+	set_display_content(inst)
+
+func _on_config_pressed() -> void:
+	var inst = config_scene.instantiate()
+	inst.name = "ConfigPanel"
 	set_display_content(inst)
 
 func _on_quit_pressed() -> void:

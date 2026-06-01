@@ -24,9 +24,9 @@ var last_nodes_evaluated: int = 0
 var nodes_count_in_search: int = 0
 
 # Main AI Entry Routine (Called by the Coordinator on the AI's Tick)
-func get_best_move(current_state: Dictionary, time_limit_ms: float) -> Vector2i:
+func get_best_move(current_state: Dictionary, time_limit_ms: float, is_maximizing_player: bool = true) -> Vector2i:
 	nodes_count_in_search = 0
-	var legal_moves = get_legal_moves(current_state, true)
+	var legal_moves = get_legal_moves(current_state, is_maximizing_player)
 	if legal_moves.is_empty():
 		last_depth = 1
 		last_nodes_evaluated = 0
@@ -40,7 +40,7 @@ func get_best_move(current_state: Dictionary, time_limit_ms: float) -> Vector2i:
 		# Deep-copy the state data structure so simulation branches don't overwrite the original board
 		var state_copy = clone_state(current_state)
 		
-		var result = alpha_beta_search(state_copy, depth, -INF, INF, true, start_time, time_limit_ms)
+		var result = alpha_beta_search(state_copy, depth, -INF, INF, is_maximizing_player, start_time, time_limit_ms)
 		
 		# If the search completed fully without a timeout signal, commit the found path
 		if result["score"] != TIMEOUT_SIGNAL:
