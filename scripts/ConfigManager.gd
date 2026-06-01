@@ -3,8 +3,34 @@ extends Node
 
 enum PlayerSetup {P_VS_AI, P_VS_P, AI_VS_AI}
 enum TimerMode {INFINITE, LIMITED}
+enum DemoMode { REAL_TIME, SLOW_MOTION, LINE_BY_LINE }
 
-var player_setup: PlayerSetup = PlayerSetup.P_VS_AI
+var red_is_ai: bool = false
+var blue_is_ai: bool = true
+
+var active_demo_mode: DemoMode = DemoMode.LINE_BY_LINE
+var is_in_demo: bool = false
+
+var player_setup: PlayerSetup:
+	get:
+		if not red_is_ai and blue_is_ai:
+			return PlayerSetup.P_VS_AI
+		elif not red_is_ai and not blue_is_ai:
+			return PlayerSetup.P_VS_P
+		else:
+			return PlayerSetup.AI_VS_AI
+	set(val):
+		match val:
+			PlayerSetup.P_VS_AI:
+				red_is_ai = false
+				blue_is_ai = true
+			PlayerSetup.P_VS_P:
+				red_is_ai = false
+				blue_is_ai = false
+			PlayerSetup.AI_VS_AI:
+				red_is_ai = true
+				blue_is_ai = true
+
 var max_rounds: int = 5
 var tick_speed: float = 0.05 # default is Intermediate (0.1) or Fast (0.05)
 var timer_mode: TimerMode = TimerMode.INFINITE

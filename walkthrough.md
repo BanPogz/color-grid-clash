@@ -552,37 +552,51 @@ We have completed another round of critical polish to elevate visual legibility 
 
 ---
 
-## ⚙️ Dynamic System Configuration Dashboard
+## ⚙️ Dynamic System Configuration Dashboard & Dynamic HUD Overhaul
 
 We have implemented a fully interactive **System Configuration** screen accessible directly from the Main Menu, allowing players to customize the match parameters dynamically:
 
-### 1. Customizable Game Parameters
-* **Player Setup Mode**:
-  * **Player vs. AI (Default)**: Play against the advanced minimax snek.
-  * **Player vs. Player (PvP)**: Play locally against another human. Player 1 uses the WASD keys (configured as `p1_move` in the Godot Input Map), while Player 2 uses the Arrow Keys (configured as `p2_move`).
-  * **AI vs. AI (Watch Mode)**: Watch two automated minimax search agents compete against each other.
-* **Match Rounds**: Set the match length to anywhere between `1` and `10` rounds per game.
-* **Game Movement Speed**:
-  * **Slow**: `0.50s` game loop tick speed.
-  * **Intermediate**: `0.10s` game loop tick speed.
-  * **Fast**: `0.05s` game loop tick speed.
-* **Clock Mode & Round Time Limit**:
-  * **Infinite (No Time Limit)**: The match clock increments upward from `00:00` with no time restrictions.
-  * **Limited (Countdown)**: The match clock decrements downward from a customized limit (up to `3 minutes / 180s`). If the timer expires before a clash, the round terminates in a **DRAW** with no winner.
-* **Obstacle Wall Density**:
-  * **None**: `0%` of grid space covered by permanent walls.
-  * **Less**: Between `5%` and `10%` grid density.
-  * **More**: Between `11%` and `20%` grid density.
-* **Energy Cores Count**:
-  * **None**: `0` active energy cores.
-  * **Less**: `2` standard cores and `1` rare core spawned simultaneously on the grid.
-  * **More**: `4` standard cores and `2` rare cores spawned simultaneously on the grid.
-* **Enclosure Flood Fill**: Toggle to **Enable** or **Disable** the programmatic flood fill system.
+### 1. Overhauled Configuration Parameters
+* **P1 & P2 Character Setup Mode**:
+  * Replaced the three-choice dropdown with two independent cybernetic **CheckButton** toggles:
+    * **Player 1 (Red) AI Toggle**: Unchecked = Human Player (Red), Checked = Minimax AI Agent.
+    * **Player 2 (Blue) AI Toggle**: Unchecked = Human Player (Blue), Checked = Minimax AI Agent (Default).
+  * This dynamically supports **all four gameplay combinations**:
+    * **Player vs. AI (Default)**: Solo vs. AI.
+    * **Player vs. Player (PvP)**: Local human vs. human. Player 1 uses WASD keys, Player 2 uses Arrow keys.
+    * **AI vs. AI (Watch Mode)**: Spectate two automated minimax agents competing.
+    * **AI vs. Player**: Red AI vs. Blue Human.
+* **Match Rounds (HSlider)**: Smooth `1` to `10` rounds HSlider.
+* **Game Movement Speed (HSlider)**: Discrete 3-step HSlider mapping to Slow (`0.50s` ticks), Intermediate (`0.10s` ticks), or Fast (`0.05s` ticks).
+* **Round Time Limit (HSlider)**: Discrete 7-step HSlider where `0` represents "Infinite (No Limit)" and `1-6` maps to seconds (`30s`, `45s`, `60s`, `90s`, `120s`, `180s`).
+* **Obstacle Wall Density (HSlider)**: Discrete 3-step HSlider mapping to None (`0%`), Less (`5% - 10%`), or More (`11% - 20%`).
+* **Energy Cores Count (HSlider)**: Discrete 3-step HSlider mapping to None (`0`), Less (`2-3`), or More (`3-6`).
+* **Enclosure Flood Fill (CheckButton)**: Dynamic toggle button showing checked ("Enabled") or unchecked ("Disabled") status.
+* *Note: Every slider row programmatically updates a glowing cyan value label next to it in real-time as you drag.*
 
 ### 2. Main Menu UI Integration
-* **Sleek Cybernetic Button**: Programmatically instantiates the `CONFIGURATION` button directly into the Main Menu sidebar, positioned seamlessly above `QUIT`.
-* **Harmonious Theme**: Styled with the custom-themed space charcoal normal state and glowing neon-cyan border focus/hover state to match other sidebar buttons.
+* **Sleek Cybernetic Button**: Linked seamlessly to the existing `ConfigButton` node in `main_menu.tscn` to perfectly preserve left-alignment, the gorgeous TRS Million typeface, and 24px sizing.
+* **Harmonious Theme**: Styled normal, hover, pressed, and focus overrides with custom deep charcoal backgrounds and glowing cyan shadow borders.
 * **Robust Input Flow**: Fully compatible with keyboard (Arrow keys/WASD/Enter) and controller D-pad / Joystick navigation, automatically grabbing focus when the screen loads and allowing quick dismissal back to the welcome screen with `Escape` / `B` / `Circle`.
+
+### 3. Dynamic Gameplay HUD Overhaul
+* **Adaptive Headers**: HUD panels inspect `ConfigManager` flags and dynamically display names matching the setup: e.g., `PLAYER 1` vs `AI SEARCHER` in PvAI, or `AI SEARCHER 1` vs `AI SEARCHER 2` in AI vs AI.
+* **Alternate Footers**: Footers dynamically swap contents:
+  * **Human Sides**: Displays a clean **Controls Info Box** detailing the custom keyboard movements (WASD for Red, Arrow keys for Blue).
+  * **AI Sides**: Displays the real-time **Minimax Telemetry Box** tracking search depth, think speed in milliseconds, and evaluated node count.
+* **Dynamic Indicators**: Replaced the static 5-circle indicator bar at the top with a dynamic HBox container that clears and spawns the exact amount of indicators matching `max_rounds`.
+* **Neutral Frame Glow**: Changed the grid frame shadow color from blue to a semi-transparent neutral white (`Color(1.0, 1.0, 1.0, 0.15)`) for enhanced grid legibility.
+
+### 4. Post-Round Confirmation Pause
+* **Human confirmation**: If there is at least one Human Player in the setup, the round breakdown overlay will pause indefinitely, displaying `"PRESS ANY CONTROL KEY TO START NEXT ROUND"`. Transition is started only when a key or joypad button is pressed.
+* **AI Watch Mode**: If playing AI vs. AI, the game automatically resets and loads the next round after a 3-second delay to preserve seamless, hands-free spectating.
+
+### 5. AI Energy Core Hunting Heuristics Fix
+* **The Root Cause**: Previously, the minimax AI snek treated energy core cell values (`CellType.ENERGY_CORE` and `CellType.RARE_ENERGY_CORE`) as blocked obstacles inside `is_empty_cell()` and `check_terminal()`. As a result, the AI actively avoided cores under the impression that moving onto them would result in a crash and round loss.
+* **The Solution**: 
+  * Redefined `is_empty_cell()` and `check_terminal()` in `AIModule.gd` to recognize `ENERGY_CORE` and `RARE_ENERGY_CORE` as 100% safe to traverse.
+  * Overhauled `apply_move()` inside the simulation layer to detect when the AI or Human player moves onto a core, adding a score bonus (`+15.0` for basic cores, `+30.0` for rare cores) and consuming it in the simulated matrix.
+  * Updated `evaluate()` to add this accumulated core bonus to the final evaluation score, motivating the AI to actively target, hunt, and consume energy cores throughout the match!
 
 
 

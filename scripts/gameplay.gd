@@ -221,25 +221,25 @@ func _on_tick_timer_timeout() -> void:
 		"blue_trail_count": ai_player.body_segments.size() + 1
 	}
 	
-	if ConfigManager.player_setup == ConfigManager.PlayerSetup.AI_VS_AI and player_red.has_method("think_and_decide"):
+	var think_time_ms_red = 0.0
+	if ConfigManager.red_is_ai and player_red.has_method("think_and_decide"):
+		var start_think_time = Time.get_ticks_msec()
 		red_dir = player_red.think_and_decide(current_state_data)
+		think_time_ms_red = float(Time.get_ticks_msec() - start_think_time)
 	
 	var blue_dir = ai_player.current_direction
-	var think_time_ms = 0.0
-	if ConfigManager.player_setup != ConfigManager.PlayerSetup.P_VS_P:
+	var think_time_ms_blue = 0.0
+	if ConfigManager.blue_is_ai and ai_player.has_method("think_and_decide"):
 		var start_think_time = Time.get_ticks_msec()
 		blue_dir = ai_player.think_and_decide(current_state_data)
-		var end_think_time = Time.get_ticks_msec()
-		think_time_ms = end_think_time - start_think_time
+		think_time_ms_blue = float(Time.get_ticks_msec() - start_think_time)
 	
 	# Update Minimax telemetry stats on HUD
 	if hud != null:
-		if ai_player.ai_module != null and ConfigManager.player_setup != ConfigManager.PlayerSetup.P_VS_P:
-			var last_depth = ai_player.ai_module.last_depth
-			var last_nodes = ai_player.ai_module.last_nodes_evaluated
-			hud.update_ai_telemetry(last_depth, think_time_ms, last_nodes)
-		else:
-			hud.update_ai_telemetry(0, 0.0, 0)
+		if ConfigManager.red_is_ai and player_red.get("ai_module") != null:
+			hud.update_red_ai_telemetry(player_red.ai_module.last_depth, think_time_ms_red, player_red.ai_module.last_nodes_evaluated)
+		if ConfigManager.blue_is_ai and ai_player.get("ai_module") != null:
+			hud.update_blue_ai_telemetry(ai_player.ai_module.last_depth, think_time_ms_blue, ai_player.ai_module.last_nodes_evaluated)
 	
 	# 2. Compute candidate positions
 	var next_red = player_red.grid_position + red_dir
@@ -787,7 +787,7 @@ func setup_cybernetic_grid_layout() -> void:
 	frame_style.corner_radius_bottom_right = 6
 	
 	# Add an outer glow using shadow
-	frame_style.shadow_color = Color(0, 0.94, 1.0, 0.08) # Cyan tint glow
+	frame_style.shadow_color = Color(1.0, 1.0, 1.0, 0.15) # Neutral white glow
 	frame_style.shadow_size = 15
 	frame.add_theme_stylebox_override("panel", frame_style)
 	add_child(frame)

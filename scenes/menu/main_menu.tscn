@@ -79,6 +79,13 @@ theme_override_font_sizes/font_size = 24
 text = "Configuration"
 alignment = 0
 
+[node name="AIdemo" type="Button" parent="Control/Panel/VBoxContainer" unique_id=1906558961]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_3rkf3")
+theme_override_font_sizes/font_size = 24
+text = "AI VISUAL DEMO"
+alignment = 0
+
 [node name="QuitButton" type="Button" parent="Control/Panel/VBoxContainer" unique_id=75112816]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_3rkf3")

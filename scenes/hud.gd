@@ -31,9 +31,16 @@ var round_title: Label
 var round_indicators: HBoxContainer
 var timer_label: Label
 
-var ai_depth: Label
-var ai_speed: Label
-var ai_nodes: Label
+var red_depth_label: Label
+var red_speed_label: Label
+var red_nodes_label: Label
+
+var blue_depth_label: Label
+var blue_speed_label: Label
+var blue_nodes_label: Label
+
+var waiting_for_continue: bool = false
+var continue_callback: Callable
 
 func create_neon_panel(border_color: Color) -> StyleBoxFlat:
 	var style = StyleBoxFlat.new()
@@ -50,6 +57,102 @@ func create_neon_panel(border_color: Color) -> StyleBoxFlat:
 	style.shadow_size = 12
 	style.shadow_offset = Vector2.ZERO
 	return style
+
+func create_controls_box(player_id: int) -> PanelContainer:
+	var ctrl_box = PanelContainer.new()
+	var ctrl_style = StyleBoxFlat.new()
+	ctrl_style.bg_color = Color("#141722")
+	ctrl_style.set_border_width_all(1)
+	ctrl_style.border_color = Color("#222736")
+	ctrl_style.corner_radius_top_left = 6
+	ctrl_style.corner_radius_top_right = 6
+	ctrl_style.corner_radius_bottom_left = 6
+	ctrl_style.corner_radius_bottom_right = 6
+	ctrl_box.add_theme_stylebox_override("panel", ctrl_style)
+	
+	var ctrl_margin = MarginContainer.new()
+	ctrl_margin.add_theme_constant_override("margin_left", 8)
+	ctrl_margin.add_theme_constant_override("margin_top", 8)
+	ctrl_margin.add_theme_constant_override("margin_right", 8)
+	ctrl_margin.add_theme_constant_override("margin_bottom", 8)
+	ctrl_box.add_child(ctrl_margin)
+	
+	var ctrl_lbl = Label.new()
+	var is_pvp = (not ConfigManager.red_is_ai) and (not ConfigManager.blue_is_ai)
+	if player_id == 1:
+		if is_pvp:
+			ctrl_lbl.text = "CONTROLS\nW/A/S/D Keys\nChange direction\nwithout 180 flips."
+		else:
+			ctrl_lbl.text = "CONTROLS\nArrow Keys or WASD\nChange direction\nwithout 180 flips."
+	else:
+		ctrl_lbl.text = "CONTROLS\nArrow Keys\nChange direction\nwithout 180 flips."
+		
+	ctrl_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ctrl_lbl.add_theme_font_size_override("font_size", 12)
+	ctrl_lbl.add_theme_color_override("font_color", Color("#a0a5b5"))
+	ctrl_margin.add_child(ctrl_lbl)
+	return ctrl_box
+
+func create_telemetry_box(player_id: int) -> PanelContainer:
+	var ai_box = PanelContainer.new()
+	var ctrl_style = StyleBoxFlat.new()
+	ctrl_style.bg_color = Color("#141722")
+	ctrl_style.set_border_width_all(1)
+	ctrl_style.border_color = Color("#222736")
+	ctrl_style.corner_radius_top_left = 6
+	ctrl_style.corner_radius_top_right = 6
+	ctrl_style.corner_radius_bottom_left = 6
+	ctrl_style.corner_radius_bottom_right = 6
+	ai_box.add_theme_stylebox_override("panel", ctrl_style)
+	
+	var ai_margin = MarginContainer.new()
+	ai_margin.add_theme_constant_override("margin_left", 8)
+	ai_margin.add_theme_constant_override("margin_top", 8)
+	ai_margin.add_theme_constant_override("margin_right", 8)
+	ai_margin.add_theme_constant_override("margin_bottom", 8)
+	ai_box.add_child(ai_margin)
+	
+	var ai_vbox = VBoxContainer.new()
+	ai_margin.add_child(ai_vbox)
+	
+	var ai_title = Label.new()
+	ai_title.text = "MINIMAX TELEMETRY"
+	ai_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ai_title.add_theme_font_size_override("font_size", 11)
+	if player_id == 1:
+		ai_title.add_theme_color_override("font_color", Color("#ff2a7a"))
+	else:
+		ai_title.add_theme_color_override("font_color", Color("#00f0ff"))
+	ai_vbox.add_child(ai_title)
+	
+	var d_lbl = Label.new()
+	d_lbl.text = "Search Depth: 0"
+	d_lbl.add_theme_font_size_override("font_size", 11)
+	d_lbl.add_theme_color_override("font_color", Color("#a0a5b5"))
+	ai_vbox.add_child(d_lbl)
+	
+	var s_lbl = Label.new()
+	s_lbl.text = "Speed: 0ms/tick"
+	s_lbl.add_theme_font_size_override("font_size", 11)
+	s_lbl.add_theme_color_override("font_color", Color("#a0a5b5"))
+	ai_vbox.add_child(s_lbl)
+	
+	var n_lbl = Label.new()
+	n_lbl.text = "Evaluation: Idle"
+	n_lbl.add_theme_font_size_override("font_size", 11)
+	n_lbl.add_theme_color_override("font_color", Color("#a0a5b5"))
+	ai_vbox.add_child(n_lbl)
+	
+	if player_id == 1:
+		red_depth_label = d_lbl
+		red_speed_label = s_lbl
+		red_nodes_label = n_lbl
+	else:
+		blue_depth_label = d_lbl
+		blue_speed_label = s_lbl
+		blue_nodes_label = n_lbl
+		
+	return ai_box
 
 func _ready() -> void:
 	# Enable UI input handling even when Node tree is paused
@@ -82,7 +185,10 @@ func _ready() -> void:
 	
 	# P1 Header
 	var left_header = Label.new()
-	left_header.text = "PLAYER 1"
+	if ConfigManager.red_is_ai:
+		left_header.text = "AI SEARCHER 1"
+	else:
+		left_header.text = "PLAYER 1"
 	left_header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	left_header.add_theme_color_override("font_color", Color("#ff2a7a"))
 	left_header.add_theme_font_size_override("font_size", 22)
@@ -163,32 +269,11 @@ func _ready() -> void:
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	left_vbox.add_child(spacer)
 	
-	# Controls Info Box
-	var ctrl_box = PanelContainer.new()
-	var ctrl_style = StyleBoxFlat.new()
-	ctrl_style.bg_color = Color("#141722")
-	ctrl_style.set_border_width_all(1)
-	ctrl_style.border_color = Color("#222736")
-	ctrl_style.corner_radius_top_left = 6
-	ctrl_style.corner_radius_top_right = 6
-	ctrl_style.corner_radius_bottom_left = 6
-	ctrl_style.corner_radius_bottom_right = 6
-	ctrl_box.add_theme_stylebox_override("panel", ctrl_style)
-	left_vbox.add_child(ctrl_box)
-	
-	var ctrl_margin = MarginContainer.new()
-	ctrl_margin.add_theme_constant_override("margin_left", 8)
-	ctrl_margin.add_theme_constant_override("margin_top", 8)
-	ctrl_margin.add_theme_constant_override("margin_right", 8)
-	ctrl_margin.add_theme_constant_override("margin_bottom", 8)
-	ctrl_box.add_child(ctrl_margin)
-	
-	var ctrl_lbl = Label.new()
-	ctrl_lbl.text = "CONTROLS\nWASD or Arrow Keys\nChange direction\nwithout 180 flips."
-	ctrl_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	ctrl_lbl.add_theme_font_size_override("font_size", 12)
-	ctrl_lbl.add_theme_color_override("font_color", Color("#a0a5b5"))
-	ctrl_margin.add_child(ctrl_lbl)
+	# Dynamic Controls / Telemetry Box for P1
+	if ConfigManager.red_is_ai:
+		left_vbox.add_child(create_telemetry_box(1))
+	else:
+		left_vbox.add_child(create_controls_box(1))
 	
 	# Right HUD Panel (Blue AI)
 	var right_panel = PanelContainer.new()
@@ -211,7 +296,13 @@ func _ready() -> void:
 	
 	# AI Header
 	var right_header = Label.new()
-	right_header.text = "AI SEARCHER"
+	if ConfigManager.blue_is_ai:
+		if ConfigManager.red_is_ai:
+			right_header.text = "AI SEARCHER 2"
+		else:
+			right_header.text = "AI SEARCHER"
+	else:
+		right_header.text = "PLAYER 2"
 	right_header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	right_header.add_theme_color_override("font_color", Color("#00f0ff"))
 	right_header.add_theme_font_size_override("font_size", 22)
@@ -292,45 +383,11 @@ func _ready() -> void:
 	spacer2.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	right_vbox.add_child(spacer2)
 	
-	# AI Telemetry Box
-	var ai_box = PanelContainer.new()
-	ai_box.add_theme_stylebox_override("panel", ctrl_style)
-	right_vbox.add_child(ai_box)
-	
-	var ai_margin = MarginContainer.new()
-	ai_margin.add_theme_constant_override("margin_left", 8)
-	ai_margin.add_theme_constant_override("margin_top", 8)
-	ai_margin.add_theme_constant_override("margin_right", 8)
-	ai_margin.add_theme_constant_override("margin_bottom", 8)
-	ai_box.add_child(ai_margin)
-	
-	var ai_vbox = VBoxContainer.new()
-	ai_margin.add_child(ai_vbox)
-	
-	var ai_title = Label.new()
-	ai_title.text = "MINIMAX TELEMETRY"
-	ai_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	ai_title.add_theme_font_size_override("font_size", 11)
-	ai_title.add_theme_color_override("font_color", Color("#00f0ff"))
-	ai_vbox.add_child(ai_title)
-	
-	ai_depth = Label.new()
-	ai_depth.text = "Search Depth: 0"
-	ai_depth.add_theme_font_size_override("font_size", 11)
-	ai_depth.add_theme_color_override("font_color", Color("#a0a5b5"))
-	ai_vbox.add_child(ai_depth)
-	
-	ai_speed = Label.new()
-	ai_speed.text = "Speed: 0ms/tick"
-	ai_speed.add_theme_font_size_override("font_size", 11)
-	ai_speed.add_theme_color_override("font_color", Color("#a0a5b5"))
-	ai_vbox.add_child(ai_speed)
-	
-	ai_nodes = Label.new()
-	ai_nodes.text = "Evaluation: Idle"
-	ai_nodes.add_theme_font_size_override("font_size", 11)
-	ai_nodes.add_theme_color_override("font_color", Color("#a0a5b5"))
-	ai_vbox.add_child(ai_nodes)
+	# Dynamic Controls / Telemetry Box for P2
+	if ConfigManager.blue_is_ai:
+		right_vbox.add_child(create_telemetry_box(2))
+	else:
+		right_vbox.add_child(create_controls_box(2))
 	
 	# Top HUD container
 	var top_hud = HBoxContainer.new()
@@ -356,7 +413,7 @@ func _ready() -> void:
 	round_indicators.add_theme_constant_override("separation", 6)
 	top_hud.add_child(round_indicators)
 	
-	for i in range(5):
+	for i in range(ConfigManager.max_rounds):
 		var indicator = Label.new()
 		indicator.text = "○"
 		indicator.add_theme_font_size_override("font_size", 20)
@@ -395,6 +452,16 @@ func update_cores(left_basic: int, left_rare: int, right_basic: int, right_rare:
 func update_round(current_round: int, max_rounds: int, round_history: Array) -> void:
 	round_title.text = "ROUND %d/%d" % [current_round, max_rounds]
 	
+	if round_indicators.get_child_count() != max_rounds:
+		for child in round_indicators.get_children():
+			child.queue_free()
+		for i in range(max_rounds):
+			var indicator = Label.new()
+			indicator.text = "○"
+			indicator.add_theme_font_size_override("font_size", 20)
+			indicator.add_theme_color_override("font_color", Color("#606575"))
+			round_indicators.add_child(indicator)
+	
 	var children = round_indicators.get_children()
 	for i in range(children.size()):
 		if i < round_history.size():
@@ -417,10 +484,25 @@ func update_timer(secs: int) -> void:
 	var rem_secs = secs % 60
 	timer_label.text = "%02d:%02d" % [mins, rem_secs]
 
+func update_red_ai_telemetry(depth: int, time_ms: float, nodes: int) -> void:
+	if red_depth_label != null:
+		red_depth_label.text = "Search Depth: %d" % depth
+	if red_speed_label != null:
+		red_speed_label.text = "Speed: %.1f ms/tick" % time_ms
+	if red_nodes_label != null:
+		red_nodes_label.text = "Evaluation: %s nodes" % (str(nodes) if nodes > 0 else "Idle")
+
+func update_blue_ai_telemetry(depth: int, time_ms: float, nodes: int) -> void:
+	if blue_depth_label != null:
+		blue_depth_label.text = "Search Depth: %d" % depth
+	if blue_speed_label != null:
+		blue_speed_label.text = "Speed: %.1f ms/tick" % time_ms
+	if blue_nodes_label != null:
+		blue_nodes_label.text = "Evaluation: %s nodes" % (str(nodes) if nodes > 0 else "Idle")
+
+# For backward compatibility
 func update_ai_telemetry(depth: int, time_ms: float, nodes: int) -> void:
-	ai_depth.text = "Search Depth: %d" % depth
-	ai_speed.text = "Speed: %.1f ms" % time_ms
-	ai_nodes.text = "Nodes: %d" % nodes
+	update_blue_ai_telemetry(depth, time_ms, nodes)
 
 func setup_countdown_overlay() -> void:
 	countdown_overlay = Control.new()
@@ -623,19 +705,34 @@ func show_round_results(round_num: int, winner_type: String, winner_text: String
 	add_breakdown_row(grid, "Round Bonus:", "+%d" % p1_bonus, "+%d" % ai_bonus)
 	add_breakdown_row(grid, "Round Total:", "%d pts" % p1_round_pts, "%d pts" % ai_round_pts, true)
 	
+	var is_ai_vs_ai = ConfigManager.red_is_ai and ConfigManager.blue_is_ai
 	var next_lbl = Label.new()
-	next_lbl.text = "PREPARING NEXT ROUND..."
+	if is_ai_vs_ai:
+		next_lbl.text = "PREPARING NEXT ROUND..."
+	else:
+		next_lbl.text = "PRESS ANY CONTROL KEY TO START NEXT ROUND"
 	next_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	next_lbl.add_theme_color_override("font_color", Color("#606575"))
+	if is_ai_vs_ai:
+		next_lbl.add_theme_color_override("font_color", Color("#606575"))
+	else:
+		next_lbl.add_theme_color_override("font_color", Color("#00f0ff")) # glowing cyan
 	next_lbl.add_theme_font_size_override("font_size", 14)
 	vbox.add_child(next_lbl)
 	
 	post_round_overlay.visible = true
 	
-	# Wait for 3 seconds, then callback
-	await get_tree().create_timer(3.0).timeout
-	post_round_overlay.visible = false
-	callback.call()
+	if is_ai_vs_ai:
+		# Wait for 3 seconds, then callback
+		await get_tree().create_timer(3.0).timeout
+		post_round_overlay.visible = false
+		callback.call()
+	else:
+		# Wait for player input in _unhandled_input
+		continue_callback = callback
+		waiting_for_continue = false
+		# Accidental press protection: Wait 1 second before detecting user inputs
+		await get_tree().create_timer(1.0).timeout
+		waiting_for_continue = true
 
 func add_breakdown_row(grid: GridContainer, label_text: String, p1_text: String, ai_text: String, bold: bool = false) -> void:
 	var lbl = Label.new()
@@ -896,6 +993,14 @@ func hide_pause_menu() -> void:
 		pause_overlay.visible = false
 
 func _unhandled_input(event: InputEvent) -> void:
+	if waiting_for_continue:
+		if (event is InputEventKey or event is InputEventJoypadButton or event is InputEventMouseButton) and event.is_pressed():
+			waiting_for_continue = false
+			post_round_overlay.visible = false
+			continue_callback.call()
+			get_viewport().set_input_as_handled()
+			return
+			
 	if pause_overlay != null and pause_overlay.visible:
 		if event.is_action_pressed("pause_game") or event.is_action_pressed("ui_cancel"):
 			get_viewport().set_input_as_handled()

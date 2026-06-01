@@ -1,6 +1,8 @@
 # config_panel.gd
 extends Control
 
+var mode_status_lbl: Label
+
 func _ready() -> void:
 	var control = self
 	
@@ -39,185 +41,198 @@ func _ready() -> void:
 	var grid = GridContainer.new()
 	grid.columns = 2
 	grid.add_theme_constant_override("h_separation", 40)
-	grid.add_theme_constant_override("v_separation", 12)
+	grid.add_theme_constant_override("v_separation", 15)
 	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	vbox.add_child(grid)
 	
-	# 1. Player Setup (Game Mode)
+	# 1. Player Setup (Two CheckButtons for P1 and P2)
 	var mode_lbl = create_label("Player Setup Mode:")
 	grid.add_child(mode_lbl)
 	
-	var mode_opt = OptionButton.new()
-	mode_opt.add_item("Player vs. AI (Default)", 0)
-	mode_opt.add_item("Player vs. Player (PvP)", 1)
-	mode_opt.add_item("AI vs. AI (Watch Mode)", 2)
-	mode_opt.selected = ConfigManager.player_setup
-	mode_opt.item_selected.connect(func(idx): ConfigManager.player_setup = idx)
-	style_dropdown(mode_opt)
-	grid.add_child(mode_opt)
+	var mode_box = VBoxContainer.new()
+	mode_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mode_box.add_theme_constant_override("separation", 6)
+	grid.add_child(mode_box)
 	
-	# 2. Rounds (1-10)
-	var rounds_lbl = create_label("Match Rounds:")
-	grid.add_child(rounds_lbl)
+	var chk_row = HBoxContainer.new()
+	chk_row.add_theme_constant_override("separation", 12)
+	mode_box.add_child(chk_row)
 	
-	var rounds_opt = OptionButton.new()
-	for i in range(1, 11):
-		rounds_opt.add_item("%d Round(s)" % i, i)
-	rounds_opt.selected = ConfigManager.max_rounds - 1
-	rounds_opt.item_selected.connect(func(idx): ConfigManager.max_rounds = idx + 1)
-	style_dropdown(rounds_opt)
-	grid.add_child(rounds_opt)
+	var red_chk = CheckButton.new()
+	red_chk.text = "P1 (Red) AI"
+	red_chk.button_pressed = ConfigManager.red_is_ai
+	style_checkbutton(red_chk)
+	chk_row.add_child(red_chk)
 	
-	# 3. Speed (Slow = 0.5, Intermediate = 0.1, Fast = 0.05)
-	var speed_lbl = create_label("Game Movement Speed:")
-	grid.add_child(speed_lbl)
+	var vs_lbl = Label.new()
+	vs_lbl.text = "vs."
+	vs_lbl.add_theme_color_override("font_color", Color("#606575"))
+	vs_lbl.add_theme_font_size_override("font_size", 14)
+	chk_row.add_child(vs_lbl)
 	
-	var speed_opt = OptionButton.new()
-	speed_opt.add_item("Slow (0.50s ticks)", 0)
-	speed_opt.add_item("Intermediate (0.10s ticks)", 1)
-	speed_opt.add_item("Fast (0.05s ticks)", 2)
+	var blue_chk = CheckButton.new()
+	blue_chk.text = "P2 (Blue) AI"
+	blue_chk.button_pressed = ConfigManager.blue_is_ai
+	style_checkbutton(blue_chk)
+	chk_row.add_child(blue_chk)
 	
-	if is_equal_approx(ConfigManager.tick_speed, 0.5):
-		speed_opt.selected = 0
-	elif is_equal_approx(ConfigManager.tick_speed, 0.1):
-		speed_opt.selected = 1
-	else:
-		speed_opt.selected = 2
-		
-	speed_opt.item_selected.connect(func(idx):
-		if idx == 0:
-			ConfigManager.tick_speed = 0.5
-		elif idx == 1:
-			ConfigManager.tick_speed = 0.1
-		else:
-			ConfigManager.tick_speed = 0.05
+	mode_status_lbl = Label.new()
+	mode_status_lbl.add_theme_color_override("font_color", Color("#00f0ff")) # glowing cyan
+	mode_status_lbl.add_theme_font_size_override("font_size", 12)
+	mode_box.add_child(mode_status_lbl)
+	
+	# Connect checkbuttons
+	var update_mode_status = func():
+		ConfigManager.red_is_ai = red_chk.button_pressed
+		ConfigManager.blue_is_ai = blue_chk.button_pressed
+		var p1_str = "AI Searcher 1" if ConfigManager.red_is_ai else "Player 1 (WASD)"
+		var p2_str = "AI Searcher 2" if ConfigManager.blue_is_ai else "Player 2 (Arrows)"
+		mode_status_lbl.text = "Active Protocol: %s vs. %s" % [p1_str.to_upper(), p2_str.to_upper()]
+	
+	red_chk.toggled.connect(func(pressed): update_mode_status.call())
+	blue_chk.toggled.connect(func(pressed): update_mode_status.call())
+	update_mode_status.call() # initial call
+	
+	# 2. Rounds Slider (1-10)
+	var format_rounds = func(val):
+		return "%d Round(s)" % int(val)
+	create_slider_row(
+		grid,
+		"Match Rounds:",
+		1.0, 10.0, 1.0,
+		float(ConfigManager.max_rounds),
+		func(val): ConfigManager.max_rounds = int(val),
+		format_rounds
 	)
-	style_dropdown(speed_opt)
-	grid.add_child(speed_opt)
 	
-	# 4. Timer Mode (Infinite, Limited)
-	var timer_lbl = create_label("Clock Mode:")
-	grid.add_child(timer_lbl)
+	# 3. Speed Slider (Slow, Intermediate, Fast)
+	var speed_idx = 2 # default Fast
+	if is_equal_approx(ConfigManager.tick_speed, 0.5):
+		speed_idx = 0
+	elif is_equal_approx(ConfigManager.tick_speed, 0.1):
+		speed_idx = 1
+		
+	var format_speed = func(val):
+		var idx = int(val)
+		if idx == 0: return "Slow (0.50s ticks)"
+		elif idx == 1: return "Intermediate (0.10s / 100ms ticks)"
+		else: return "Fast (0.05s / 50ms ticks)"
+		
+	create_slider_row(
+		grid,
+		"Game Movement Speed:",
+		0.0, 2.0, 1.0,
+		float(speed_idx),
+		func(val):
+			var idx = int(val)
+			if idx == 0: ConfigManager.tick_speed = 0.5
+			elif idx == 1: ConfigManager.tick_speed = 0.1
+			else: ConfigManager.tick_speed = 0.05,
+		format_speed
+	)
 	
-	var timer_opt = OptionButton.new()
-	timer_opt.add_item("Infinite (No Time Limit)", 0)
-	timer_opt.add_item("Limited (Countdown)", 1)
-	timer_opt.selected = ConfigManager.timer_mode
-	style_dropdown(timer_opt)
-	grid.add_child(timer_opt)
-	
-	# 5. Round Duration (Used if Limited)
-	var duration_lbl = create_label("Round Time Limit:")
-	grid.add_child(duration_lbl)
-	
-	var duration_opt = OptionButton.new()
-	var duration_times = [30, 45, 60, 90, 120, 180]
-	for sec in duration_times:
+	# 4. Timer / Limit Slider
+	var timer_idx = 0 # Default Infinite
+	if ConfigManager.timer_mode == ConfigManager.TimerMode.LIMITED:
+		var duration_times = [0, 30, 45, 60, 90, 120, 180]
+		var found = duration_times.find(ConfigManager.round_time_limit)
+		timer_idx = found if found != -1 else 3 # fallback to 60s
+		
+	var format_timer = func(val):
+		var idx = int(val)
+		if idx == 0: return "Infinite (No Time Limit)"
+		var sec = [0, 30, 45, 60, 90, 120, 180][idx]
 		var mins = sec / 60
 		var rem = sec % 60
 		if mins > 0:
-			if rem > 0:
-				duration_opt.add_item("%d min %d sec (%d s)" % [mins, rem, sec], sec)
-			else:
-				duration_opt.add_item("%d min (%d s)" % [mins, sec], sec)
-		else:
-			duration_opt.add_item("%d seconds" % sec, sec)
-			
-	var current_limit = ConfigManager.round_time_limit
-	var found_idx = duration_times.find(current_limit)
-	if found_idx != -1:
-		duration_opt.selected = found_idx
-	else:
-		duration_opt.selected = 2 # fallback to 60s
+			if rem > 0: return "%d min %d sec (%d s)" % [mins, rem, sec]
+			else: return "%d min (%d s)" % [mins, sec]
+		return "%d seconds" % sec
 		
-	duration_opt.item_selected.connect(func(idx):
-		ConfigManager.round_time_limit = duration_times[idx]
+	create_slider_row(
+		grid,
+		"Round Time Limit:",
+		0.0, 6.0, 1.0,
+		float(timer_idx),
+		func(val):
+			var idx = int(val)
+			if idx == 0:
+				ConfigManager.timer_mode = ConfigManager.TimerMode.INFINITE
+			else:
+				ConfigManager.timer_mode = ConfigManager.TimerMode.LIMITED
+				ConfigManager.round_time_limit = [0, 30, 45, 60, 90, 120, 180][idx],
+		format_timer
 	)
-	style_dropdown(duration_opt)
-	grid.add_child(duration_opt)
 	
-	# Connect visibility / enable state of time limit dropdown dynamically
-	timer_opt.item_selected.connect(func(idx):
-		ConfigManager.timer_mode = idx
-		duration_opt.disabled = idx == 0
-		duration_opt.modulate.a = 0.35 if idx == 0 else 1.0
-	)
-	# Trigger initially
-	duration_opt.disabled = ConfigManager.timer_mode == ConfigManager.TimerMode.INFINITE
-	duration_opt.modulate.a = 0.35 if ConfigManager.timer_mode == ConfigManager.TimerMode.INFINITE else 1.0
-	
-	# 6. Wall Density
-	var wall_lbl = create_label("Obstacle Wall Density:")
-	grid.add_child(wall_lbl)
-	
-	var wall_opt = OptionButton.new()
-	wall_opt.add_item("None (0.00)", 0)
-	wall_opt.add_item("Less (0.05 - 0.10)", 1)
-	wall_opt.add_item("More (0.11 - 0.20)", 2)
-	
+	# 5. Wall Density Slider
+	var wall_idx = 1 # Less default
 	match ConfigManager.wall_density_type:
-		"NONE":
-			wall_opt.selected = 0
-		"LESS":
-			wall_opt.selected = 1
-		"MORE":
-			wall_opt.selected = 2
-			
-	wall_opt.item_selected.connect(func(idx):
-		if idx == 0:
-			ConfigManager.wall_density_type = "NONE"
-		elif idx == 1:
-			ConfigManager.wall_density_type = "LESS"
-		else:
-			ConfigManager.wall_density_type = "MORE"
+		"NONE": wall_idx = 0
+		"LESS": wall_idx = 1
+		"MORE": wall_idx = 2
+		
+	var format_wall = func(val):
+		var idx = int(val)
+		if idx == 0: return "None (0.00)"
+		elif idx == 1: return "Less (0.05 - 0.10)"
+		else: return "More (0.11 - 0.20)"
+		
+	create_slider_row(
+		grid,
+		"Obstacle Wall Density:",
+		0.0, 2.0, 1.0,
+		float(wall_idx),
+		func(val):
+			var idx = int(val)
+			if idx == 0: ConfigManager.wall_density_type = "NONE"
+			elif idx == 1: ConfigManager.wall_density_type = "LESS"
+			else: ConfigManager.wall_density_type = "MORE",
+		format_wall
 	)
-	style_dropdown(wall_opt)
-	grid.add_child(wall_opt)
 	
-	# 7. Energy Cores
-	var cores_lbl = create_label("Energy Cores count:")
-	grid.add_child(cores_lbl)
-	
-	var cores_opt = OptionButton.new()
-	cores_opt.add_item("None (0 cores)", 0)
-	cores_opt.add_item("Less (2-3 cores)", 1)
-	cores_opt.add_item("More (3-6 cores)", 2)
-	
+	# 6. Energy Cores Slider
+	var cores_idx = 1 # Less default
 	match ConfigManager.cores_count_type:
-		"NONE":
-			cores_opt.selected = 0
-		"LESS":
-			cores_opt.selected = 1
-		"MORE":
-			cores_opt.selected = 2
-			
-	cores_opt.item_selected.connect(func(idx):
-		if idx == 0:
-			ConfigManager.cores_count_type = "NONE"
-		elif idx == 1:
-			ConfigManager.cores_count_type = "LESS"
-		else:
-			ConfigManager.cores_count_type = "MORE"
+		"NONE": cores_idx = 0
+		"LESS": cores_idx = 1
+		"MORE": cores_idx = 2
+		
+	var format_cores = func(val):
+		var idx = int(val)
+		if idx == 0: return "None (0 cores)"
+		elif idx == 1: return "Less (2-3 cores simultaneously)"
+		else: return "More (3-6 cores simultaneously)"
+		
+	create_slider_row(
+		grid,
+		"Energy Cores count:",
+		0.0, 2.0, 1.0,
+		float(cores_idx),
+		func(val):
+			var idx = int(val)
+			if idx == 0: ConfigManager.cores_count_type = "NONE"
+			elif idx == 1: ConfigManager.cores_count_type = "LESS"
+			else: ConfigManager.cores_count_type = "MORE",
+		format_cores
 	)
-	style_dropdown(cores_opt)
-	grid.add_child(cores_opt)
 	
-	# 8. Flood Fill Enabled
+	# 7. Flood Fill Enabled CheckButton
 	var flood_lbl = create_label("Enclosure Flood Fill:")
 	grid.add_child(flood_lbl)
 	
-	var flood_opt = OptionButton.new()
-	flood_opt.add_item("Enabled (Protocol Active)", 0)
-	flood_opt.add_item("Disabled (Canceled)", 1)
-	flood_opt.selected = 0 if ConfigManager.flood_fill_enabled else 1
-	flood_opt.item_selected.connect(func(idx):
-		ConfigManager.flood_fill_enabled = idx == 0
-	)
-	style_dropdown(flood_opt)
-	grid.add_child(flood_opt)
+	var flood_chk = CheckButton.new()
+	flood_chk.text = "Enabled" if ConfigManager.flood_fill_enabled else "Disabled"
+	flood_chk.button_pressed = ConfigManager.flood_fill_enabled
+	style_checkbutton(flood_chk)
+	grid.add_child(flood_chk)
 	
-	# Setup autofocus on first OptionButton so controller navigation works immediately
-	mode_opt.grab_focus()
+	flood_chk.toggled.connect(func(pressed):
+		ConfigManager.flood_fill_enabled = pressed
+		flood_chk.text = "Enabled" if pressed else "Disabled"
+	)
+	
+	# Setup autofocus on Red checkbutton so keyboard/controller navigation works immediately
+	red_chk.grab_focus()
 
 func create_label(txt: String) -> Label:
 	var lbl = Label.new()
@@ -227,8 +242,40 @@ func create_label(txt: String) -> Label:
 	lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	return lbl
 
-func style_dropdown(opt: OptionButton) -> void:
-	opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+func create_slider_row(grid: GridContainer, label_text: String, min_val: float, max_val: float, step: float, current_val: float, value_changed_callback: Callable, format_callback: Callable) -> HSlider:
+	var lbl = create_label(label_text)
+	grid.add_child(lbl)
+	
+	var row = HBoxContainer.new()
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_theme_constant_override("separation", 15)
+	grid.add_child(row)
+	
+	var slider = HSlider.new()
+	slider.min_value = min_val
+	slider.max_value = max_val
+	slider.step = step
+	slider.value = current_val
+	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(slider)
+	
+	var val_lbl = Label.new()
+	val_lbl.text = format_callback.call(current_val)
+	val_lbl.add_theme_color_override("font_color", Color("#00f0ff")) # Cyan glow text
+	val_lbl.add_theme_font_size_override("font_size", 13)
+	val_lbl.custom_minimum_size = Vector2(180, 0)
+	row.add_child(val_lbl)
+	
+	slider.value_changed.connect(func(val):
+		val_lbl.text = format_callback.call(val)
+		value_changed_callback.call(val)
+	)
+	
+	style_slider(slider)
+	return slider
+
+func style_checkbutton(chk: CheckButton) -> void:
+	chk.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	
 	var style_normal = StyleBoxFlat.new()
 	style_normal.bg_color = Color("#12141c")
@@ -252,10 +299,33 @@ func style_dropdown(opt: OptionButton) -> void:
 	style_hover.shadow_color = Color(0, 0.94, 1.0, 0.1)
 	style_hover.shadow_size = 6
 	
-	opt.add_theme_stylebox_override("normal", style_normal)
-	opt.add_theme_stylebox_override("hover", style_hover)
-	opt.add_theme_stylebox_override("pressed", style_hover)
-	opt.add_theme_stylebox_override("focus", style_hover) # Glow on focus!
-	opt.add_theme_color_override("font_color", Color("#d0d5e5"))
-	opt.add_theme_color_override("font_hover_color", Color.WHITE)
-	opt.add_theme_color_override("font_focus_color", Color.WHITE)
+	chk.add_theme_stylebox_override("normal", style_normal)
+	chk.add_theme_stylebox_override("hover", style_hover)
+	chk.add_theme_stylebox_override("pressed", style_hover)
+	chk.add_theme_stylebox_override("focus", style_hover) # Glow on focus!
+	chk.add_theme_color_override("font_color", Color("#d0d5e5"))
+	chk.add_theme_color_override("font_hover_color", Color.WHITE)
+	chk.add_theme_color_override("font_focus_color", Color.WHITE)
+
+func style_slider(slider: HSlider) -> void:
+	var track = StyleBoxFlat.new()
+	track.bg_color = Color("#141722")
+	track.set_border_width_all(1)
+	track.border_color = Color("#222736")
+	track.corner_radius_top_left = 3
+	track.corner_radius_top_right = 3
+	track.corner_radius_bottom_left = 3
+	track.corner_radius_bottom_right = 3
+	track.content_margin_top = 4
+	track.content_margin_bottom = 4
+	
+	var area = StyleBoxFlat.new()
+	area.bg_color = Color("#00f0ff") # Cyan track filled glow
+	area.corner_radius_top_left = 3
+	area.corner_radius_top_right = 3
+	area.corner_radius_bottom_left = 3
+	area.corner_radius_bottom_right = 3
+	
+	slider.add_theme_stylebox_override("slider", track)
+	slider.add_theme_stylebox_override("grabber_area", area)
+	slider.add_theme_stylebox_override("grabber_area_highlight", area)

@@ -4,18 +4,19 @@ extends BasePlayer
 var ai_module: AIModule = null
 
 func _ready() -> void:
-	if ConfigManager.player_setup == ConfigManager.PlayerSetup.AI_VS_AI:
+	if ConfigManager.red_is_ai:
 		ai_module = AIModule.new()
 		add_child(ai_module)
 
 func _unhandled_input(event: InputEvent) -> void:
-	if ConfigManager.player_setup == ConfigManager.PlayerSetup.AI_VS_AI:
+	if ConfigManager.red_is_ai:
 		return # Controlled by AI, ignore human input!
 		
-	var up_act = "p1_moveUp" if ConfigManager.player_setup == ConfigManager.PlayerSetup.P_VS_P else "ui_up"
-	var down_act = "p1_moveDown" if ConfigManager.player_setup == ConfigManager.PlayerSetup.P_VS_P else "ui_down"
-	var left_act = "p1_moveLeft" if ConfigManager.player_setup == ConfigManager.PlayerSetup.P_VS_P else "ui_left"
-	var right_act = "p1_moveRight" if ConfigManager.player_setup == ConfigManager.PlayerSetup.P_VS_P else "ui_right"
+	var is_pvp = (not ConfigManager.red_is_ai) and (not ConfigManager.blue_is_ai)
+	var up_act = "p1_moveUp" if is_pvp else "ui_up"
+	var down_act = "p1_moveDown" if is_pvp else "ui_down"
+	var left_act = "p1_moveLeft" if is_pvp else "ui_left"
+	var right_act = "p1_moveRight" if is_pvp else "ui_right"
 	
 	if event.is_action_pressed(up_act) and current_direction != Vector2i.DOWN:
 		current_direction = Vector2i.UP

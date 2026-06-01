@@ -4,14 +4,14 @@ extends BasePlayer
 var ai_module: AIModule = null
 
 func _ready() -> void:
-	if ConfigManager.player_setup != ConfigManager.PlayerSetup.P_VS_P:
+	if ConfigManager.blue_is_ai:
 		# Create and add the AIModule node programmatically
 		ai_module = AIModule.new()
 		add_child(ai_module)
 
-# Captures keyboard and controller inputs for Player 2 in PvP mode
+# Captures keyboard and controller inputs for Player 2 in Human mode
 func _unhandled_input(event: InputEvent) -> void:
-	if ConfigManager.player_setup == ConfigManager.PlayerSetup.P_VS_P:
+	if not ConfigManager.blue_is_ai:
 		if event.is_action_pressed("p2_moveUp") and current_direction != Vector2i.DOWN:
 			current_direction = Vector2i.UP
 		elif event.is_action_pressed("p2_moveDown") and current_direction != Vector2i.UP:

@@ -2,7 +2,7 @@ extends Node
 class_name AIModule
 
 # Constants mapping directly to your Gameplay configuration
-enum CellType { EMPTY, WALL, RED_TRAIL, BLUE_TRAIL, ENERGY_CORE }
+enum CellType { EMPTY, WALL, RED_TRAIL, BLUE_TRAIL, ENERGY_CORE, RARE_ENERGY_CORE }
 
 const WIN_SCORE = 100000.0
 const LOSS_SCORE = -100000.0
@@ -125,8 +125,11 @@ func evaluate(state: Dictionary, terminal_status: Dictionary) -> float:
 	var blue_reach: int = bfs_reachable(state, state["blue_pos"])
 	var red_reach: int = bfs_reachable(state, state["red_pos"])
 	
-	# Group Weights: w1 = 1.0, w2 = 2.0
-	return 1.0 * (blue_trail - red_trail) + 2.0 * (blue_reach - red_reach)
+	var blue_bonus: float = state.get("blue_bonus", 0.0)
+	var red_bonus: float = state.get("red_bonus", 0.0)
+	
+	# Group Weights: w1 = 1.0, w2 = 2.0, plus core bonuses
+	return 1.0 * (blue_trail - red_trail) + 2.0 * (blue_reach - red_reach) + (blue_bonus - red_bonus)
 
 # Breadth-First Search (BFS) for Flood-Fill Spatial Analysis
 func bfs_reachable(state: Dictionary, head_pos: Vector2i) -> int:
@@ -185,7 +188,8 @@ func get_legal_moves(state: Dictionary, is_max: bool) -> Array:
 func is_empty_cell(matrix: Array, pos: Vector2i) -> bool:
 	if pos.x < 0 or pos.x >= grid_width or pos.y < 0 or pos.y >= grid_height:
 		return false
-	return matrix[pos.x][pos.y] == CellType.EMPTY
+	var type = matrix[pos.x][pos.y]
+	return type == CellType.EMPTY or type == CellType.ENERGY_CORE or type == CellType.RARE_ENERGY_CORE
 
 func apply_move(state: Dictionary, move: Vector2i, is_max: bool) -> Dictionary:
 	var next_state = clone_state(state)
@@ -193,10 +197,28 @@ func apply_move(state: Dictionary, move: Vector2i, is_max: bool) -> Dictionary:
 		next_state["matrix"][state["blue_pos"].x][state["blue_pos"].y] = CellType.BLUE_TRAIL
 		next_state["blue_pos"] += move
 		next_state["blue_trail_count"] += 1
+		
+		# Check if Blue is stepping onto an energy core
+		var target_type = next_state["matrix"][next_state["blue_pos"].x][next_state["blue_pos"].y]
+		if target_type == CellType.ENERGY_CORE:
+			next_state["blue_bonus"] += 15.0
+			next_state["matrix"][next_state["blue_pos"].x][next_state["blue_pos"].y] = CellType.EMPTY # consume standard core in simulation
+		elif target_type == CellType.RARE_ENERGY_CORE:
+			next_state["blue_bonus"] += 30.0
+			next_state["matrix"][next_state["blue_pos"].x][next_state["blue_pos"].y] = CellType.EMPTY # consume rare core in simulation
 	else:
 		next_state["matrix"][state["red_pos"].x][state["red_pos"].y] = CellType.RED_TRAIL
 		next_state["red_pos"] += move
 		next_state["red_trail_count"] += 1
+		
+		# Check if Red is stepping onto an energy core
+		var target_type = next_state["matrix"][next_state["red_pos"].x][next_state["red_pos"].y]
+		if target_type == CellType.ENERGY_CORE:
+			next_state["red_bonus"] += 15.0
+			next_state["matrix"][next_state["red_pos"].x][next_state["red_pos"].y] = CellType.EMPTY # consume standard core in simulation
+		elif target_type == CellType.RARE_ENERGY_CORE:
+			next_state["red_bonus"] += 30.0
+			next_state["matrix"][next_state["red_pos"].x][next_state["red_pos"].y] = CellType.EMPTY # consume rare core in simulation
 	return next_state
 
 func check_terminal(state: Dictionary) -> Dictionary:
@@ -204,9 +226,9 @@ func check_terminal(state: Dictionary) -> Dictionary:
 	var r_pos = state["red_pos"]
 	var b_pos = state["blue_pos"]
 	
-	# Check if either head has stepped into an out-of-bounds or non-empty block
-	var red_crashed = r_pos.x < 0 or r_pos.x >= grid_width or r_pos.y < 0 or r_pos.y >= grid_height or matrix[r_pos.x][r_pos.y] != CellType.EMPTY
-	var blue_crashed = b_pos.x < 0 or b_pos.x >= grid_width or b_pos.y < 0 or b_pos.y >= grid_height or matrix[b_pos.x][b_pos.y] != CellType.EMPTY
+	# Check if either head has stepped into an out-of-bounds or non-empty/unsafe block
+	var red_crashed = not is_empty_cell(matrix, r_pos)
+	var blue_crashed = not is_empty_cell(matrix, b_pos)
 	
 	if red_crashed and blue_crashed: return {"is_terminal": true, "winner": "DRAW"}
 	if red_crashed: return {"is_terminal": true, "winner": "BLUE"}
@@ -222,5 +244,7 @@ func clone_state(state: Dictionary) -> Dictionary:
 		"red_pos": state["red_pos"],
 		"blue_pos": state["blue_pos"],
 		"red_trail_count": state["red_trail_count"],
-		"blue_trail_count": state["blue_trail_count"]
+		"blue_trail_count": state["blue_trail_count"],
+		"red_bonus": state.get("red_bonus", 0.0),
+		"blue_bonus": state.get("blue_bonus", 0.0)
 	}
