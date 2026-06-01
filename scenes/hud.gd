@@ -2,6 +2,8 @@ extends CanvasLayer
 
 signal play_again_requested
 signal main_menu_requested
+signal resume_requested
+signal restart_requested
 
 var countdown_overlay: Control
 var countdown_label: Label
@@ -9,6 +11,7 @@ var countdown_round_label: Label
 
 var post_round_overlay: Control
 var post_game_overlay: Control
+var pause_overlay: Control
 
 var left_match_label: Label
 var left_round_label: Label
@@ -49,6 +52,9 @@ func create_neon_panel(border_color: Color) -> StyleBoxFlat:
 	return style
 
 func _ready() -> void:
+	# Enable UI input handling even when Node tree is paused
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	
 	# Main Control container that anchors to screen
 	var main_ctrl = Control.new()
 	main_ctrl.name = "MainControl"
@@ -461,41 +467,64 @@ func start_round_countdown(round_num: int, callback: Callable) -> void:
 	if countdown_overlay == null:
 		setup_countdown_overlay()
 		
+	# Ensure all other overlays are hidden
+	if post_round_overlay != null:
+		post_round_overlay.visible = false
+	if post_game_overlay != null:
+		post_game_overlay.visible = false
+	if pause_overlay != null:
+		pause_overlay.visible = false
+		
 	countdown_round_label.text = "ROUND %d" % round_num
-	countdown_label.text = "3"
-	countdown_label.add_theme_color_override("font_color", Color("#ff2a7a"))
 	countdown_overlay.visible = true
 	
-	# Pulse "3"
-	var tween = create_tween()
+	# Play "3" (1.0 second)
+	countdown_label.text = "3"
+	countdown_label.add_theme_color_override("font_color", Color("#ff2a7a"))
+	countdown_label.modulate.a = 0.0
 	countdown_label.scale = Vector2.ONE
-	tween.tween_property(countdown_label, "scale", Vector2(1.3, 1.3), 0.1)
-	tween.tween_property(countdown_label, "scale", Vector2(1.0, 1.0), 0.4)
-	
+	var tween1 = create_tween()
+	tween1.tween_property(countdown_label, "modulate:a", 1.0, 0.15)
+	tween1.tween_interval(0.55)
+	tween1.tween_property(countdown_label, "modulate:a", 0.0, 0.3)
 	await get_tree().create_timer(1.0).timeout
+	
+	# Play "2" (1.0 second)
 	countdown_label.text = "2"
+	countdown_label.add_theme_color_override("font_color", Color("#ff2a7a"))
+	countdown_label.modulate.a = 0.0
+	countdown_label.scale = Vector2.ONE
 	var tween2 = create_tween()
-	countdown_label.scale = Vector2.ONE
-	tween2.tween_property(countdown_label, "scale", Vector2(1.3, 1.3), 0.1)
-	tween2.tween_property(countdown_label, "scale", Vector2(1.0, 1.0), 0.4)
-	
+	tween2.tween_property(countdown_label, "modulate:a", 1.0, 0.15)
+	tween2.tween_interval(0.55)
+	tween2.tween_property(countdown_label, "modulate:a", 0.0, 0.3)
 	await get_tree().create_timer(1.0).timeout
+	
+	# Play "1" (1.0 second)
 	countdown_label.text = "1"
-	var tween3 = create_tween()
+	countdown_label.add_theme_color_override("font_color", Color("#ff2a7a"))
+	countdown_label.modulate.a = 0.0
 	countdown_label.scale = Vector2.ONE
-	tween3.tween_property(countdown_label, "scale", Vector2(1.3, 1.3), 0.1)
-	tween3.tween_property(countdown_label, "scale", Vector2(1.0, 1.0), 0.4)
-	
+	var tween3 = create_tween()
+	tween3.tween_property(countdown_label, "modulate:a", 1.0, 0.15)
+	tween3.tween_interval(0.55)
+	tween3.tween_property(countdown_label, "modulate:a", 0.0, 0.3)
 	await get_tree().create_timer(1.0).timeout
+	
+	# Play "GO!" (0.8 second)
 	countdown_label.text = "GO!"
 	countdown_label.add_theme_color_override("font_color", Color("#00f0ff"))
-	var tween4 = create_tween()
+	countdown_label.modulate.a = 0.0
 	countdown_label.scale = Vector2.ONE
-	tween4.tween_property(countdown_label, "scale", Vector2(1.8, 1.8), 0.1)
-	tween4.tween_property(countdown_label, "scale", Vector2(1.0, 1.0), 0.4)
-	
+	var tween4 = create_tween()
+	tween4.tween_property(countdown_label, "modulate:a", 1.0, 0.15)
+	tween4.tween_interval(0.35)
+	tween4.tween_property(countdown_label, "modulate:a", 0.0, 0.3)
 	await get_tree().create_timer(0.8).timeout
+	
 	countdown_overlay.visible = false
+	# Reset label modulation back to fully opaque
+	countdown_label.modulate.a = 1.0
 	callback.call()
 
 func setup_post_round_overlay() -> void:
@@ -743,9 +772,131 @@ func show_match_results(winner_type: String, winner_text: String, p1_total: int,
 	style_menu.set_corner_radius_all(6)
 	
 	again_btn.add_theme_stylebox_override("normal", style_again)
+	var style_again_focus = style_again.duplicate()
+	style_again_focus.shadow_color = Color(1.0, 0.16, 0.48, 0.4)
+	style_again_focus.shadow_size = 8
+	again_btn.add_theme_stylebox_override("hover", style_again_focus)
+	again_btn.add_theme_stylebox_override("focus", style_again_focus)
 	again_btn.add_theme_color_override("font_color", Color("#ff2a7a"))
 	
 	menu_btn.add_theme_stylebox_override("normal", style_menu)
+	var style_menu_focus = style_menu.duplicate()
+	style_menu_focus.shadow_color = Color(0, 0.94, 1.0, 0.4)
+	style_menu_focus.shadow_size = 8
+	menu_btn.add_theme_stylebox_override("hover", style_menu_focus)
+	menu_btn.add_theme_stylebox_override("focus", style_menu_focus)
 	menu_btn.add_theme_color_override("font_color", Color("#00f0ff"))
 	
 	post_game_overlay.visible = true
+	again_btn.grab_focus()
+
+func setup_pause_overlay() -> void:
+	pause_overlay = Control.new()
+	pause_overlay.name = "PauseOverlay"
+	pause_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	pause_overlay.visible = false
+	add_child(pause_overlay)
+	
+	# Fullscreen dark glass overlay
+	var bg = ColorRect.new()
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.color = Color(0.03, 0.04, 0.06, 0.85)
+	pause_overlay.add_child(bg)
+	
+	var vbox = VBoxContainer.new()
+	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_theme_constant_override("separation", 25)
+	pause_overlay.add_child(vbox)
+	
+	var title = Label.new()
+	title.text = "GAME PAUSED"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_color_override("font_color", Color("#00f0ff")) # Neon cyan
+	title.add_theme_font_size_override("font_size", 36)
+	vbox.add_child(title)
+	
+	# Spacer
+	var spacer = Control.new()
+	spacer.custom_minimum_size = Vector2(0, 10)
+	vbox.add_child(spacer)
+	
+	# Buttons
+	var resume_btn = Button.new()
+	resume_btn.name = "ResumeButton"
+	resume_btn.text = "RESUME PROTOCOL"
+	resume_btn.custom_minimum_size = Vector2(200, 45)
+	resume_btn.pressed.connect(func():
+		resume_requested.emit()
+	)
+	vbox.add_child(resume_btn)
+	
+	var restart_btn = Button.new()
+	restart_btn.text = "RESTART MATCH"
+	restart_btn.custom_minimum_size = Vector2(200, 45)
+	restart_btn.pressed.connect(func():
+		pause_overlay.visible = false
+		restart_requested.emit()
+	)
+	vbox.add_child(restart_btn)
+	
+	var menu_btn = Button.new()
+	menu_btn.text = "ABORT TO MENU"
+	menu_btn.custom_minimum_size = Vector2(200, 45)
+	menu_btn.pressed.connect(func():
+		pause_overlay.visible = false
+		main_menu_requested.emit()
+	)
+	vbox.add_child(menu_btn)
+	
+	# Style buttons
+	var style_resume = StyleBoxFlat.new()
+	style_resume.bg_color = Color("#0c0e14")
+	style_resume.border_color = Color("#00f0ff")
+	style_resume.set_border_width_all(1)
+	style_resume.set_corner_radius_all(6)
+	
+	var style_normal = StyleBoxFlat.new()
+	style_normal.bg_color = Color("#0c0e14")
+	style_normal.border_color = Color("#ff2a7a")
+	style_normal.set_border_width_all(1)
+	style_normal.set_corner_radius_all(6)
+	
+	resume_btn.add_theme_stylebox_override("normal", style_resume)
+	var style_resume_focus = style_resume.duplicate()
+	style_resume_focus.shadow_color = Color(0, 0.94, 1.0, 0.4)
+	style_resume_focus.shadow_size = 8
+	resume_btn.add_theme_stylebox_override("hover", style_resume_focus)
+	resume_btn.add_theme_stylebox_override("focus", style_resume_focus)
+	resume_btn.add_theme_color_override("font_color", Color("#00f0ff"))
+	
+	restart_btn.add_theme_stylebox_override("normal", style_normal)
+	var style_normal_focus = style_normal.duplicate()
+	style_normal_focus.shadow_color = Color(1.0, 0.16, 0.48, 0.4)
+	style_normal_focus.shadow_size = 8
+	restart_btn.add_theme_stylebox_override("hover", style_normal_focus)
+	restart_btn.add_theme_stylebox_override("focus", style_normal_focus)
+	restart_btn.add_theme_color_override("font_color", Color("#ff2a7a"))
+	
+	menu_btn.add_theme_stylebox_override("normal", style_normal)
+	menu_btn.add_theme_stylebox_override("hover", style_normal_focus)
+	menu_btn.add_theme_stylebox_override("focus", style_normal_focus)
+	menu_btn.add_theme_color_override("font_color", Color("#ff2a7a"))
+
+func show_pause_menu() -> void:
+	if pause_overlay == null:
+		setup_pause_overlay()
+	pause_overlay.visible = true
+	var resume_btn = pause_overlay.find_child("ResumeButton", true, false)
+	if resume_btn != null:
+		resume_btn.grab_focus()
+
+func hide_pause_menu() -> void:
+	if pause_overlay != null:
+		pause_overlay.visible = false
+
+func _unhandled_input(event: InputEvent) -> void:
+	if pause_overlay != null and pause_overlay.visible:
+		if event.is_action_pressed("pause_game") or event.is_action_pressed("ui_cancel"):
+			get_viewport().set_input_as_handled()
+			resume_requested.emit()

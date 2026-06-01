@@ -25,6 +25,9 @@ func _ready() -> void:
 	
 	# Show rules or default welcome screen in the display panel
 	show_welcome_screen()
+	
+	# Grab focus initially for controller/keyboard navigation support
+	start_button.grab_focus()
 
 func setup_styling() -> void:
 	# Main menu panel styling
@@ -72,24 +75,51 @@ func setup_styling() -> void:
 		btn.add_theme_stylebox_override("normal", btn_normal)
 		btn.add_theme_stylebox_override("hover", btn_hover)
 		btn.add_theme_stylebox_override("pressed", btn_hover)
+		btn.add_theme_stylebox_override("focus", btn_hover) # Glow on focus!
 		btn.add_theme_color_override("font_color", Color("#a0a5b5"))
 		btn.add_theme_color_override("font_hover_color", Color.WHITE)
 		btn.add_theme_color_override("font_pressed_color", Color("#00f0ff"))
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel"):
+		var active_child = display_panel.get_child(0) if display_panel.get_child_count() > 0 else null
+		if active_child != null and active_child.name != "WelcomeScreen":
+			show_welcome_screen()
+			if active_child.name == "ControlsMap":
+				controls_button.grab_focus()
+			elif active_child.name == "RulesAndMechanics":
+				rules_button.grab_focus()
+			elif active_child.name == "StatsPanel":
+				stats_button.grab_focus()
+			elif active_child.name == "QuitPanel":
+				quit_button.grab_focus()
+			else:
+				start_button.grab_focus()
+		else:
+			# Welcome screen Back key navigates to Quit panel
+			_on_quit_pressed()
 
 func _on_start_pressed() -> void:
 	get_tree().change_scene_to_file("res://scenes/game_panel.tscn")
 
 func _on_controls_pressed() -> void:
-	set_display_content(controls_scene.instantiate())
+	var inst = controls_scene.instantiate()
+	inst.name = "ControlsMap"
+	set_display_content(inst)
 
 func _on_rules_pressed() -> void:
-	set_display_content(rules_scene.instantiate())
+	var inst = rules_scene.instantiate()
+	inst.name = "RulesAndMechanics"
+	set_display_content(inst)
 
 func _on_stats_pressed() -> void:
-	set_display_content(stats_scene.instantiate())
+	var inst = stats_scene.instantiate()
+	inst.name = "StatsPanel"
+	set_display_content(inst)
 
 func _on_quit_pressed() -> void:
 	var quit_inst = quit_scene.instantiate()
+	quit_inst.name = "QuitPanel"
 	set_display_content(quit_inst)
 	# Connect signals from the quit scene
 	var yes_btn = quit_inst.find_child("YesButton", true, false)
@@ -98,9 +128,11 @@ func _on_quit_pressed() -> void:
 		yes_btn.pressed.connect(func(): get_tree().quit())
 	if no_btn:
 		no_btn.pressed.connect(_on_quit_cancelled)
+		no_btn.grab_focus() # Focus NO button by default for safety!
 
 func _on_quit_cancelled() -> void:
 	show_welcome_screen()
+	quit_button.grab_focus() # Refocus the quit button on cancel
 
 func set_display_content(node: Node) -> void:
 	for child in display_panel.get_children():
@@ -116,6 +148,7 @@ func set_display_content(node: Node) -> void:
 func show_welcome_screen() -> void:
 	# Create a beautiful welcome screen in code for a seamless experience
 	var welcome = VBoxContainer.new()
+	welcome.name = "WelcomeScreen"
 	welcome.alignment = BoxContainer.ALIGNMENT_CENTER
 	welcome.add_theme_constant_override("separation", 20)
 	

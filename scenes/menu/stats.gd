@@ -1,8 +1,8 @@
 # stats.gd
-extends CanvasLayer
+extends Control
 
 func _ready() -> void:
-	var control = $Control
+	var control = self
 	
 	var vbox = VBoxContainer.new()
 	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -66,7 +66,11 @@ func _ready() -> void:
 	style_normal.content_margin_right = 12
 	
 	clear_btn.add_theme_stylebox_override("normal", style_normal)
-	clear_btn.add_theme_stylebox_override("hover", style_normal)
+	var style_focus = style_normal.duplicate()
+	style_focus.shadow_color = Color(1.0, 0.16, 0.48, 0.4)
+	style_focus.shadow_size = 8
+	clear_btn.add_theme_stylebox_override("hover", style_focus)
+	clear_btn.add_theme_stylebox_override("focus", style_focus)
 	clear_btn.add_theme_color_override("font_color", Color("#ffa0af"))
 	vbox.add_child(clear_btn)
 	

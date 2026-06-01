@@ -1,8 +1,8 @@
 # quit.gd
-extends CanvasLayer
+extends Control
 
 func _ready() -> void:
-	var control = $Control
+	var control = self
 	
 	var vbox = VBoxContainer.new()
 	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -50,7 +50,17 @@ func _ready() -> void:
 	style_no.set_corner_radius_all(6)
 	
 	yes_btn.add_theme_stylebox_override("normal", style_yes)
+	var style_yes_focus = style_yes.duplicate()
+	style_yes_focus.shadow_color = Color(1.0, 0.16, 0.48, 0.4)
+	style_yes_focus.shadow_size = 8
+	yes_btn.add_theme_stylebox_override("hover", style_yes_focus)
+	yes_btn.add_theme_stylebox_override("focus", style_yes_focus)
 	yes_btn.add_theme_color_override("font_color", Color("#ff2a7a"))
 	
 	no_btn.add_theme_stylebox_override("normal", style_no)
+	var style_no_focus = style_no.duplicate()
+	style_no_focus.shadow_color = Color(0, 0.94, 1.0, 0.4)
+	style_no_focus.shadow_size = 8
+	no_btn.add_theme_stylebox_override("hover", style_no_focus)
+	no_btn.add_theme_stylebox_override("focus", style_no_focus)
 	no_btn.add_theme_color_override("font_color", Color("#00f0ff"))

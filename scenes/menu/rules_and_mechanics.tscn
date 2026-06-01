@@ -2,11 +2,11 @@
 
 [ext_resource type="Script" path="res://scenes/menu/rules_and_mechanics.gd" id="1_rules_script"]
 
-[node name="RulesAndMechanics" type="CanvasLayer" unique_id=1533511878]
-script = ExtResource("1_rules_script")
-
-[node name="Control" type="Control" parent="." unique_id=975268522]
+[node name="RulesAndMechanics" type="Control"]
 layout_mode = 3
-anchors_preset = 0
-offset_right = 720.0
-offset_bottom = 420.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_rules_script")

@@ -1,6 +1,6 @@
-[gd_scene load_steps=4 format=3 uid="uid://beqca4d46sap8"]
+[gd_scene format=3 uid="uid://beqca4d46sap8"]
 
-[ext_resource type="Script" path="res://scenes/menu/main_menu.gd" id="1_main_menu_script"]
+[ext_resource type="Script" uid="uid://b4tkyaq0s6nhc" path="res://scenes/menu/main_menu.gd" id="1_main_menu_script"]
 [ext_resource type="FontFile" uid="uid://c1oqh1ktsv8po" path="res://assets/fonts/LEDCalculator.ttf" id="1_nl8w3"]
 [ext_resource type="FontFile" uid="uid://cyie71cpqoh45" path="res://assets/fonts/TRS-Million Rg.otf" id="2_3rkf3"]
 
@@ -51,6 +51,13 @@ theme_override_font_sizes/font_size = 24
 text = "START GAME"
 alignment = 0
 
+[node name="ConfigButton" type="Button" parent="Control/Panel/VBoxContainer" unique_id=1216769904]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_3rkf3")
+theme_override_font_sizes/font_size = 24
+text = "Configuration"
+alignment = 0
+
 [node name="ControlsButton" type="Button" parent="Control/Panel/VBoxContainer" unique_id=184920053]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_3rkf3")
@@ -62,7 +69,7 @@ alignment = 0
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_3rkf3")
 theme_override_font_sizes/font_size = 24
-text = "RULES AND MECHANICS"
+text = "RULES AND MECHANICS  "
 alignment = 0
 
 [node name="StatsButton" type="Button" parent="Control/Panel/VBoxContainer" unique_id=971277413]

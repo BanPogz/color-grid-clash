@@ -5,6 +5,8 @@ class_name Gameplay extends Node2D
 @onready var ai_player: BasePlayer = $AIPlayer
 
 var tick_timer: Timer
+var round_clock_timer: Timer
+var background_layer: TileMapLayer
 enum CellType {EMPTY, WALL, RED_TRAIL, BLUE_TRAIL, ENERGY_CORE, RARE_ENERGY_CORE}
 
 # Grid parameters
@@ -20,6 +22,7 @@ var p1_match_score: int = 0
 var p2_match_score: int = 0
 var match_total_cores: int = 0
 var match_total_cells: int = 0
+var current_round_active: bool = true
 var round_history: Array = [] # Stores: "RED", "BLUE", or "DRAW"
 
 # Round specific metrics
@@ -116,6 +119,7 @@ func tile_to_pixel(grid_pos: Vector2i) -> Vector2:
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
 	initialize_matrix()
+	setup_cybernetic_grid_layout()
 	
 	# Search parent/sibling hierarchy for HUD CanvasLayer node
 	hud = get_parent().get_node_or_null("HUD")
@@ -149,28 +153,44 @@ func _ready() -> void:
 	if hud != null:
 		hud.play_again_requested.connect(restart_match)
 		hud.main_menu_requested.connect(go_to_main_menu)
+		hud.resume_requested.connect(toggle_pause)
+		hud.restart_requested.connect(func():
+			toggle_pause()
+			restart_match()
+		)
 		
 	# Update HUD live at the start (deferred so HUD's _ready() finishes building labels first)
 	call_deferred("update_hud")
 	
 	# Configure the Timer programmatically
 	tick_timer = Timer.new()
-	tick_timer.wait_time = 0.1 # Tick speed (lower = faster)
+	tick_timer.wait_time = 0.05 # Tick speed (lower = faster)
 	add_child(tick_timer)
 	tick_timer.timeout.connect(_on_tick_timer_timeout)
 	
+	round_clock_timer = Timer.new()
+	round_clock_timer.wait_time = 1.0
+	add_child(round_clock_timer)
+	round_clock_timer.timeout.connect(_on_round_clock_timer_timeout)
+	
 	if hud != null:
-		hud.start_round_countdown(current_round, func(): tick_timer.start())
+		hud.start_round_countdown(current_round, func(): 
+			tick_timer.start()
+			round_clock_timer.start()
+		)
 	else:
 		tick_timer.start()
+		round_clock_timer.start()
+
+func _on_round_clock_timer_timeout() -> void:
+	if current_round_active:
+		round_timer_elapsed += 1
+		if hud != null:
+			hud.update_timer(round_timer_elapsed)
 
 func _on_tick_timer_timeout() -> void:
 	# Ticks & timer tracking
 	tick_count += 1
-	if tick_count % 20 == 0: # 20 ticks at 0.05s = 1.0 second
-		round_timer_elapsed += 1
-		if hud != null:
-			hud.update_timer(round_timer_elapsed)
 			
 	# 1. Get intended movements
 	var red_dir = player_red.current_direction
@@ -298,24 +318,27 @@ func spawn_energy_core(is_rare: bool) -> void:
 			var core_node = Node2D.new()
 			core_node.position = tile_to_pixel(pos)
 			
-			var rect = ColorRect.new()
-			rect.custom_minimum_size = Vector2(12, 12)
-			rect.size = Vector2(12, 12)
-			rect.position = Vector2(-6, -6)
-			rect.pivot_offset = Vector2(6, 6)
+			var core_visual = Panel.new()
+			core_visual.custom_minimum_size = Vector2(12, 12)
+			core_visual.size = Vector2(12, 12)
+			core_visual.position = Vector2(-6, -6)
+			core_visual.pivot_offset = Vector2(6, 6)
 			
-			if is_rare:
-				rect.color = Color("#ffd700") # Glowing neon gold
-			else:
-				rect.color = Color("#39ff14") # Glowing neon green
-				
-			core_node.add_child(rect)
+			var style = StyleBoxFlat.new()
+			var glow_color = Color("#ffd700") if is_rare else Color("#39ff14")
+			style.bg_color = glow_color
+			style.set_corner_radius_all(6) # Circular pulsing core!
+			style.shadow_color = Color(glow_color.r, glow_color.g, glow_color.b, 0.8)
+			style.shadow_size = 8
+			
+			core_visual.add_theme_stylebox_override("panel", style)
+			core_node.add_child(core_visual)
 			add_child(core_node)
 			
 			# Pulse animation
 			var tween = core_node.create_tween().set_loops()
-			tween.tween_property(rect, "scale", Vector2(1.3, 1.3), 0.4).set_trans(Tween.TRANS_SINE)
-			tween.tween_property(rect, "scale", Vector2(0.7, 0.7), 0.4).set_trans(Tween.TRANS_SINE)
+			tween.tween_property(core_visual, "scale", Vector2(1.3, 1.3), 0.4).set_trans(Tween.TRANS_SINE)
+			tween.tween_property(core_visual, "scale", Vector2(0.7, 0.7), 0.4).set_trans(Tween.TRANS_SINE)
 			
 			active_cores[pos] = core_node
 			break
@@ -372,8 +395,11 @@ func update_hud() -> void:
 	var right_round_pts = p2_captured_cells + p2_basic_cores * 5 + p2_rare_cores * 10
 	
 	# Match points: past rounds total + current round
-	var left_match_total = p1_match_score + left_round_pts
-	var right_match_total = p2_match_score + right_round_pts
+	var left_match_total = p1_match_score
+	var right_match_total = p2_match_score
+	if current_round_active:
+		left_match_total += left_round_pts
+		right_match_total += right_round_pts
 	
 	if hud != null:
 		hud.update_scores(left_match_total, left_round_pts, right_match_total, right_round_pts)
@@ -387,6 +413,7 @@ func update_hud() -> void:
 
 func handle_round_over(outcome: String, round_message: String) -> void:
 	tick_timer.stop()
+	round_clock_timer.stop()
 	
 	var p1_won = outcome == "RED"
 	var p2_won = outcome == "BLUE"
@@ -409,6 +436,7 @@ func handle_round_over(outcome: String, round_message: String) -> void:
 	match_total_cores += p1_basic_cores + p1_rare_cores + p2_basic_cores + p2_rare_cores
 	match_total_cells += p1_captured_cells + p2_captured_cells
 	
+	current_round_active = false
 	update_hud()
 	
 	# Play post-round results display & then transition
@@ -459,6 +487,11 @@ func handle_round_over(outcome: String, round_message: String) -> void:
 			start_next_round()
 
 func start_next_round() -> void:
+	if tick_timer != null:
+		tick_timer.stop()
+	if round_clock_timer != null:
+		round_clock_timer.stop()
+		
 	current_round += 1
 	
 	# 1. Clear active energy cores
@@ -471,10 +504,12 @@ func start_next_round() -> void:
 	# Reset logical matrix
 	initialize_matrix()
 	
-	# Reset visual tilemap layer back to grid background
+	# Reset visual layers: paint background grid and clear active trails/walls on grid_layer
 	for x in range(grid_width):
 		for y in range(grid_height):
-			grid_layer.set_cell(Vector2i(x, y), 1, Vector2i(0, 0))
+			if background_layer != null:
+				background_layer.set_cell(Vector2i(x, y), 1, Vector2i(0, 0))
+			grid_layer.set_cell(Vector2i(x, y), -1)
 			
 	# 2. Reset round counters
 	p1_basic_cores = 0
@@ -512,13 +547,21 @@ func start_next_round() -> void:
 	spawn_initial_cores()
 	
 	# Update HUD
+	current_round_active = true
 	update_hud()
+	
+	if hud != null:
+		hud.update_timer(round_timer_elapsed)
 	
 	# Start round ticking with preparations countdown
 	if hud != null:
-		hud.start_round_countdown(current_round, func(): tick_timer.start())
+		hud.start_round_countdown(current_round, func(): 
+			tick_timer.start()
+			round_clock_timer.start()
+		)
 	else:
 		tick_timer.start()
+		round_clock_timer.start()
 
 func check_and_apply_enclosure_flood() -> void:
 	var red_flooded_cells: Array[Vector2i] = []
@@ -639,7 +682,126 @@ func restart_match() -> void:
 	match_total_cores = 0
 	match_total_cells = 0
 	round_history.clear()
+	current_round_active = true
 	start_next_round()
 
 func go_to_main_menu() -> void:
+	get_tree().paused = false
 	get_tree().change_scene_to_file("res://scenes/menu/main_menu.tscn")
+
+var is_paused: bool = false
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("pause_game"):
+		toggle_pause()
+
+func toggle_pause() -> void:
+	if hud != null:
+		# Ignore pause if round breakdown, countdown, or post-game overlays are open
+		var round_visible = hud.post_round_overlay != null and hud.post_round_overlay.visible
+		var game_visible = hud.post_game_overlay != null and hud.post_game_overlay.visible
+		var count_visible = hud.countdown_overlay != null and hud.countdown_overlay.visible
+		if round_visible or game_visible or count_visible:
+			return
+			
+	is_paused = not is_paused
+	get_tree().paused = is_paused
+	
+	if hud != null:
+		if is_paused:
+			hud.show_pause_menu()
+		else:
+			hud.hide_pause_menu()
+
+func setup_cybernetic_grid_layout() -> void:
+	# 1. Redesign grid background ColorRect to deep space charcoal
+	var bg_rect = $ColorRect
+	if bg_rect != null:
+		bg_rect.color = Color("#07090d") # Deep cybernetic charcoal
+		
+	# Create a dedicated background_layer programmatically to show high-fidelity subtle grid lines
+	# without modulating active trails and walls on grid_layer
+	background_layer = TileMapLayer.new()
+	background_layer.name = "BackgroundGridLayer"
+	background_layer.tile_set = grid_layer.tile_set
+	background_layer.self_modulate = Color(0.25, 0.3, 0.45, 0.75) # Subtle, highly visible grid lines
+	add_child(background_layer)
+	# Move background_layer to be behind grid_layer
+	move_child(background_layer, grid_layer.get_index())
+	
+	# Paint background grid lines immediately
+	for x in range(grid_width):
+		for y in range(grid_height):
+			background_layer.set_cell(Vector2i(x, y), 1, Vector2i(0, 0))
+			
+	# Keep grid_layer completely unmodulated so trails and walls are 100% bright and vibrant!
+	grid_layer.self_modulate = Color.WHITE
+	
+	# 3. Add a premium, glowing neon frame around the 600x600px gameplay area
+	var frame = Panel.new()
+	frame.name = "GameplayGridFrame"
+	frame.size = Vector2(600, 600)
+	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	
+	var frame_style = StyleBoxFlat.new()
+	frame_style.draw_center = false
+	frame_style.border_color = Color("#1c2030") # Sleek high-tech border
+	frame_style.set_border_width_all(2)
+	frame_style.corner_radius_top_left = 6
+	frame_style.corner_radius_top_right = 6
+	frame_style.corner_radius_bottom_left = 6
+	frame_style.corner_radius_bottom_right = 6
+	
+	# Add an outer glow using shadow
+	frame_style.shadow_color = Color(0, 0.94, 1.0, 0.08) # Cyan tint glow
+	frame_style.shadow_size = 15
+	frame.add_theme_stylebox_override("panel", frame_style)
+	add_child(frame)
+	
+	# 4. setup player heads
+	setup_neon_player_heads()
+
+func setup_neon_player_heads() -> void:
+	# Customize Player 1 (Red)
+	var red_sprite = player_red.get_node_or_null("Area2D/Sprite2D")
+	if red_sprite != null:
+		# Hide the old png sprite texture
+		red_sprite.visible = false
+		
+		# Create a gorgeous glowing neon-pink circle/square
+		var neon_head = Panel.new()
+		neon_head.name = "NeonHead"
+		neon_head.custom_minimum_size = Vector2(20, 20)
+		neon_head.size = Vector2(20, 20)
+		neon_head.position = Vector2(-10, -10) # Center on tile
+		
+		var style = StyleBoxFlat.new()
+		style.bg_color = Color("#ff2a7a") # Solid glowing neon pink
+		style.set_corner_radius_all(10) # Circular head!
+		style.shadow_color = Color(1.0, 0.16, 0.48, 0.8)
+		style.shadow_size = 8
+		neon_head.add_theme_stylebox_override("panel", style)
+		
+		player_red.add_child(neon_head)
+
+	# Customize Player 2 (Blue AI)
+	var blue_sprite = ai_player.get_node_or_null("Area2D/Sprite2D")
+	if blue_sprite != null:
+		# Hide the old png sprite texture
+		blue_sprite.visible = false
+		
+		# Create a gorgeous glowing neon-cyan circle/square
+		var neon_head = Panel.new()
+		neon_head.name = "NeonHead"
+		neon_head.custom_minimum_size = Vector2(20, 20)
+		neon_head.size = Vector2(20, 20)
+		neon_head.position = Vector2(-10, -10) # Center on tile
+		
+		var style = StyleBoxFlat.new()
+		style.bg_color = Color("#00f0ff") # Solid glowing neon cyan
+		style.set_corner_radius_all(10) # Circular head!
+		style.shadow_color = Color(0.0, 0.94, 1.0, 0.8)
+		style.shadow_size = 8
+		neon_head.add_theme_stylebox_override("panel", style)
+		
+		ai_player.add_child(neon_head)

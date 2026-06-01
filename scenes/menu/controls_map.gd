@@ -1,8 +1,8 @@
 # controls_map.gd
-extends CanvasLayer
+extends Control
 
 func _ready() -> void:
-	var control = $Control
+	var control = self
 	
 	var vbox = VBoxContainer.new()
 	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
