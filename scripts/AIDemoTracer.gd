@@ -220,72 +220,72 @@ func record_step(line_num: int, state: Dictionary, depth: int, alpha: float, bet
 func get_line_explanation(line_num: int, depth: int, is_max: bool, vars: Dictionary) -> String:
 	match line_num:
 		1:
-			return "Entering minimax evaluation tree at depth %d. Turn is: %s Player." % [depth, "MAX (Blue)" if is_max else "MIN (Red)"]
+			return "Entering minimax search tree at depth %d. Turn: %s" % [depth, "MAX (Blue)" if is_max else "MIN (Red)"]
 		2:
-			return "Evaluating node. Total nodes evaluated during search: %d." % nodes_evaluated
+			return "Evaluating state. Nodes evaluated: %d." % nodes_evaluated
 		3:
-			return "Checking base conditions: is remaining depth 0 or is game terminal (crash detected)?"
+			return "Checking if depth is 0 or if a player crashed."
 		4:
-			return "Terminal state / cutoff met. Evaluated position score: %.1f." % (vars.get("val", 0.0) if vars.has("val") else 0.0)
+			return "Cutoff depth reached. Position score: %.1f." % (vars.get("val", 0.0) if vars.has("val") else 0.0)
 		5:
 			var moves_str = ""
 			if vars.has("moves"):
 				moves_str = str(vars["moves"])
-			return "Generating and ordering legal directions to examine: %s." % moves_str
+			return "Generating and sorting valid directions: %s." % moves_str
 		6:
-			return "Deciding branch: Is this the MAX player's (Blue) turn?"
+			return "Checking if it is Blue's turn."
 		7:
-			return "MAX player (Blue AI) search: Initializing maximum evaluation value to negative infinity (-INF)."
+			return "Blue AI turn: Initializing search value to -INF."
 		8:
 			var m = vars.get("move", Vector2i.ZERO)
-			return "Iterating MAX moves: Simulating direction %s." % get_direction_name(m)
+			return "Simulating direction %s for Blue." % get_direction_name(m)
 		9:
-			return "Applying move: Simulating board state after Blue AI moves."
+			return "Simulating board state after Blue moves."
 		10:
 			if vars.has("val"):
-				return "Minimax sub-search returned a score of %.1f." % vars["val"]
-			return "Calling minimax recursively to evaluate MIN's (Red) best response."
+				return "Recursive search returned a score of %.1f." % vars["val"]
+			return "Searching for Red's best response."
 		11:
-			return "Checking if branch value %.1f is higher than best max value %.1f so far." % [vars.get("val", 0.0), vars.get("max_eval", -1000000.0)]
+			return "Comparing branch value %.1f with previous best %.1f." % [vars.get("val", 0.0), vars.get("max_eval", -1000000.0)]
 		12:
-			return "Found a better response path. Updating max evaluation score to %.1f." % vars.get("max_eval", 0.0)
+			return "Updating best value for Blue to %.1f." % vars.get("max_eval", 0.0)
 		13:
-			return "Committing local best move to simulated direction: %s." % get_direction_name(vars.get("best_move", Vector2i.ZERO))
+			return "Updating local best move to %s." % get_direction_name(vars.get("best_move", Vector2i.ZERO))
 		14:
-			return "Updating Alpha bound to %.1f (the highest guarantee MAX has secured so far)." % vars.get("alpha", 0.0)
+			return "Updating alpha to %.1f." % vars.get("alpha", 0.0)
 		15:
-			return "Checking Alpha-Beta threshold: Has Alpha exceeded Beta? (Can we prune?)"
+			return "Comparing alpha with beta to check for pruning."
 		16:
-			return "Alpha >= Beta! MAX will discard this branch since MIN can force a better option elsewhere. PRUNING!"
+			return "Alpha >= Beta: Pruning this branch."
 		17:
-			return "MAX search complete. Returning best evaluation score found: %.1f." % vars.get("max_eval", 0.0)
+			return "Blue search complete. Returning score: %.1f." % vars.get("max_eval", 0.0)
 		18:
-			return "MAX branch bypassed. MIN player (Red AI) search logic activated."
+			return "Red Player turn logic activated."
 		19:
-			return "MIN player (Red AI) search: Initializing minimum evaluation value to infinity (+INF)."
+			return "Red Player turn: Initializing search value to +INF."
 		20:
 			var m = vars.get("move", Vector2i.ZERO)
-			return "Iterating MIN moves: Simulating direction %s." % get_direction_name(m)
+			return "Simulating direction %s for Red." % get_direction_name(m)
 		21:
-			return "Applying move: Simulating board state after Red AI moves."
+			return "Simulating board state after Red moves."
 		22:
 			if vars.has("val"):
-				return "Minimax sub-search returned a score of %.1f." % vars["val"]
-			return "Calling minimax recursively to evaluate MAX's (Blue) best response."
+				return "Recursive search returned a score of %.1f." % vars["val"]
+			return "Searching for Blue's best response."
 		23:
-			return "Checking if branch value %.1f is lower than best min value %.1f so far." % [vars.get("val", 0.0), vars.get("min_eval", 1000000.0)]
+			return "Comparing branch value %.1f with previous best %.1f." % [vars.get("val", 0.0), vars.get("min_eval", 1000000.0)]
 		24:
-			return "Found a better response path. Updating min evaluation score to %.1f." % vars.get("min_eval", 0.0)
+			return "Updating best value for Red to %.1f." % vars.get("min_eval", 0.0)
 		25:
-			return "Committing local best move to simulated direction: %s." % get_direction_name(vars.get("best_move", Vector2i.ZERO))
+			return "Updating local best move to %s." % get_direction_name(vars.get("best_move", Vector2i.ZERO))
 		26:
-			return "Updating Beta bound to %.1f (the lowest guarantee MIN has secured so far)." % vars.get("beta", 0.0)
+			return "Updating beta to %.1f." % vars.get("beta", 0.0)
 		27:
-			return "Checking Alpha-Beta threshold: Has Alpha exceeded Beta? (Can we prune?)"
+			return "Comparing alpha with beta to check for pruning."
 		28:
-			return "Alpha >= Beta! MIN will discard this branch since MAX can force a better option elsewhere. PRUNING!"
+			return "Alpha >= Beta: Pruning this branch."
 		29:
-			return "MIN search complete. Returning best evaluation score found: %.1f." % vars.get("min_eval", 0.0)
+			return "Red search complete. Returning score: %.1f." % vars.get("min_eval", 0.0)
 		_:
 			return "Executing minimax routine..."
 

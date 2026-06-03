@@ -74,9 +74,16 @@ func _connect_button(btn: Button) -> void:
 	# Avoid double connections if node_added is somehow fired twice
 	if not btn.pressed.is_connected(_on_button_pressed):
 		btn.pressed.connect(_on_button_pressed)
+	if not btn.mouse_entered.is_connected(_on_button_hovered):
+		btn.mouse_entered.connect(_on_button_hovered)
+	if not btn.focus_entered.is_connected(_on_button_hovered):
+		btn.focus_entered.connect(_on_button_hovered)
 
 func _on_button_pressed() -> void:
 	play_sfx("button_click")
+
+func _on_button_hovered() -> void:
+	play_sfx_volume("button_click", -15.0) # 15dB quieter for subtle hover tick
 
 func _connect_buttons_recursive(node: Node) -> void:
 	if node is Button:
@@ -156,6 +163,18 @@ func play_sfx(sfx_name: String) -> void:
 				sfx_player.volume_db = linear_to_db(vol) - 1.0
 			else:
 				sfx_player.volume_db = linear_to_db(vol) + 2.0
+		sfx_player.play()
+
+func play_sfx_volume(sfx_name: String, vol_offset: float) -> void:
+	if not ConfigManager.music_enabled:
+		return
+	if sfx_streams.has(sfx_name) and sfx_player != null:
+		sfx_player.stream = sfx_streams[sfx_name]
+		var vol = ConfigManager.music_volume
+		if vol <= 0.001:
+			sfx_player.volume_db = -80.0
+		else:
+			sfx_player.volume_db = linear_to_db(vol) + vol_offset
 		sfx_player.play()
 
 

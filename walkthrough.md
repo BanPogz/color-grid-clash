@@ -794,3 +794,62 @@ We have restructured UI accents, buttons, and panels to use distinct, action-cod
   - **Polished Separator Columns**: Thin horizontal dividers (`ColorRect` lines) separate category details (Captured Cells, Cores, Bonuses) from the final total score row.
   - **Dynamic Match Results Labels**: The final game-over results scoreboard uses the correct dynamic headers based on player vs. AI settings.
 
+### 15. Lessened Head Glow Spread, Calibrated Game Speeds, & Web Font Fallbacks (v2.1) [NEW]
+We have completed a series of user-experience and export polish items to optimize gameplay readability, difficulty, and web-platform compatibility:
+- **Lessened Head Glow Spread**: Reduced the player and AI character heads' glow ring outer shadow radius increments from `3.0` to `1.5` and lowered the opacity levels. This creates a sharper, more focused, and premium neon core glow instead of a large blurry halo.
+- **Calibrated Game Speeds**: Adjusted the game movement speeds in `ConfigManager.gd` and the settings slider in `config_panel.gd` to form a clean, geometrically proportional progression (each setting is exactly twice as fast as the previous):
+  - **Slow**: `0.40s` per tick (2.5 ticks/second)
+  - **Intermediate / Normal (Default)**: `0.20s` per tick (5.0 ticks/second) — replacing the previous `0.10s` which was too fast for a normal speed.
+  - **Fast**: `0.10s` per tick (10.0 ticks/second) — replacing the previous `0.05s` which was barely playable by humans.
+- **Web Export Font Fallbacks**: Resolved a critical rendering bug in HTML5/Web exports where special unicode symbols (such as the trail indicator dots `○`, `●`, `◌`, controls map symbols `◆`, rules list bullets `•`, and UI decorative stars `✦`, `⬡`) failed to render. We implemented a programmatic font fallback system in `ConfigManager.gd`'s `_ready()` function that dynamically appends `NotoSans-Regular.ttf` and `NotoSansMath-Regular.ttf` to the fallbacks array of all main game fonts on startup. This ensures seamless cross-platform rendering for all players on the web.
+
+### 16. Final Design Adjustments, Countdown Fonts, & Trail Color Harmonization (v2.1) [NEW]
+We have finalized the design aesthetics of the Main Menu HUDs, countdown typography, and gameplay trails:
+- **Project Credits Layout Cleanup**: Removed duplicated development team listings and updated the credits panel text structure for high readability.
+- **Neutral slate-gray Credits Border**: Removed the yellow/purple accent borders on the Credits HUD card and replaced it with a clean, neutral dark slate border (`#1d212f`) and a subtle dark drop shadow.
+- **Removed AI Visual Demo Purple Border**: Removed the electric purple border (`#a12aff`) and shadow from the card container inside `_on_ai_demo_pressed()` in `main_menu.gd`, replacing them with a neutral slate border (`#1d212f`) and a dark drop shadow to keep all cards visually cohesive.
+- **Subtle White Divider**: Replaced the split neon pink/cyan divider inside the Credits HUD with a clean, low-opacity white divider line (`Color(1.0, 1.0, 1.0, 0.15)`) to eliminate colored border biases.
+- **Same Bold Font Weight & Colors**: Verified all sub-menu panel headers (Controls, Rules & Mechanics, Records, System Configuration, AI Visual Demo, Project Credits) draw in neutral white with `ChakraPetch-Bold.ttf` to keep the menu cohesive.
+- **LED Calculator Countdown & Round Typography**: Upgraded the round preparation countdown numbers (`3`, `2`, `1`, `GO!`) and the `"ROUND #"` header labels (both inside the countdown overlay and in the top capsule HUD bar) to use the white `LEDCalculator.ttf` font to match the main menu title screen logo style.
+- **Clean Red-Pink & Electric Blue Trail Textures**: Recreated `red-body.png` and `blue-body.png` using a Python Pillow script to draw clean rounded squares with a transparent border and a thin highlight border:
+  - **Red-pink trail**: Drawn in vibrant reddish-pink (`#e6003c`) with a neon pink highlight outline (`#ff4d6a`).
+  - **Blue trail**: Drawn in rich electric blue (`#0066ff`) with a bright blue highlight outline (`#3399ff`).
+  - **Removed Side Dots**: By drawing the trails strictly within a 28x28 bounding box on the 30x30 canvas, the outer connection protrusions (which looked like small dots on the sides of the body) were completely eliminated, making segments look clean and distinct.
+- **Larger Countdown Font Sizes**: Increased the countdown numbers font size to `120`, the countdown overlay round header font size to `48`, and the top bar HUD round title font size to `18` to make countdowns and headers look bold and prominent.
+- **Dynamic Arena Crash Visual Effects**: Added a custom `CrashExplosionNode` class in `gameplay.gd`. When a collision is detected, expanding glowing rings matching the player colors (neon pink, neon cyan, or golden-yellow for head-on draws) spawn at the crash site and fade out over 0.65 seconds, providing high-feedback chiptune-style visual feedback.
+- **Dynamic Button Hover/Focus Audio Feedback**: Upgraded `MusicPlayer.gd` to listen for button hover and focus events, playing a satisfying, very quiet (-15dB offset) click/blip to provide high-fidelity audio feedback when navigating with keyboard, gamepad, or mouse.
+
+
+### 17. Flat Retro Trails, HUD Font Size Boost, Submenu Dividers & Credits Contrast (v2.2) [NEW]
+We have completed a series of user-experience and visual enhancements to the menu displays and gameplay visuals:
+- **Flat Retro Trail Textures**: Replaced the rounded trail body images with sharp, square 30x30 rectangles to perfectly fit the retro pixel theme. Redrawn using a Python script:
+  - **Red Trail**: Pure vibrant red (#eb0000) with a bright red outline (#ff5050) and width 2.
+  - **Blue Trail**: Pure vibrant blue (#0046eb) with a bright blue outline (#50b4ff) and width 2.
+  - They now fill the entire grid tile, eliminating any gaps or side dots.
+- **Larger Countdown & Round Sizes**: Boosted HUD text font sizes to make round transitions feel high impact:
+  - Countdown tick numbers (3, 2, 1, GO!) increased from 120 to 180.
+  - Countdown overlay round title increased from 48 to 64.
+  - Gameplay top bar round label increased from 18 to 24.
+- **Gameplay Collision Delay & Concentric Animation**:
+  - Stopping gameplay tickers instantly upon player crash to freeze the cycles.
+  - Added a 1.5 seconds delay post-crash before displaying the results overlay, allowing the collision animation to play in full view.
+  - Updated CrashExplosionNode with z_index = 10 and custom drawing of expanding concentric circles matching the Rules panel simulation (outer fading player color ring, inner fading yellow core).
+- **Unified Submenu Divider Styling**: Replaced the neon pink/cyan split dividers in the Controls, Rules, Records, Configuration, and AI Visual Demo screens with the centered, subtle white divider line (Color(1.0, 1.0, 1.0, 0.15)) matching Project Credits.
+- **Project Credits Legibility & Formatting**:
+  - Upgraded the gray body text to a high-contrast, bright silver/white (#e2e6f0) for excellent readability against the dark card.
+  - Removed [center] and [/center] tags.
+  - Restructured the BBCode formatting to avoid nested color tags, fixing the bug where raw BBCode tags were rendered literally on screen.
+
+- **Welcome Screen Label Sizing Boost**: Increased all font sizes of the welcome screen HUD layout labels:
+  - Header label from 28 to 36.
+  - Tagline subtitle label from 13 to 18.
+  - Action guidance description label from 12 to 16.
+  - Quick rules card title from 12 to 16.
+  - Tips bullet and body text from 11 to 14.
+  - Footer version label from 10 to 13.
+- **System Configuration White Card Borders**: Converted Cards 1, 2, and 3 borders (and matching headers) inside the system configuration HUD to solid white (Color.WHITE), removing the pink, blue, and yellow styling.
+- **Toggled Toggle Text Colors**: Configured toggle switch labels (
+ed_chk, lue_chk, lood_chk, music_chk) to automatically render in yellow (#ffd700) when toggled ON (pressed) and fall back to standard gray (#a0a5b5) when toggled OFF.
+
+- **Yellow Configuration Sliders & Value Text**: Custom stylized sliders (slider, grabber_area) and their associated value labels (al_lbl) now render in yellow (#ffd700) instead of cyan to fit the theme configuration updates.
+- **Toggled Card Border & Shadow Coloring**: Toggles' card style boxes (style_on, style_on_hover, style_focus) now use yellow #ffd700 border lines and glowing gold shadows when ON. The OFF states now use neutral gray borders #222736/#3a3f50 without glows, matching the text styling and completely turning gray when OFF and yellow when ON.

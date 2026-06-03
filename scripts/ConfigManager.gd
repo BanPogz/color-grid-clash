@@ -32,7 +32,7 @@ var player_setup: PlayerSetup:
 				blue_is_ai = true
 
 var max_rounds: int = 5
-var tick_speed: float = 0.1 # default is Intermediate (0.1)
+var tick_speed: float = 0.2 # default is Intermediate (0.2)
 var timer_mode: TimerMode = TimerMode.INFINITE
 var round_time_limit: int = 60 # in seconds (default is 1 minute)
 var wall_density_type: String = "LESS" # NONE, LESS, MORE
@@ -75,3 +75,25 @@ func get_rare_cores_count() -> int:
 			return 2
 		_:
 			return 1
+
+func _ready() -> void:
+	# Add fallback fonts to ensure web export renders special symbols: ◆, ●, ○, •, ✦, ⬡, ◌
+	var noto_sans = load("res://assets/fonts/NotoSans-Regular.ttf")
+	var noto_math = load("res://assets/fonts/NotoSansMath-Regular.ttf")
+	
+	if noto_sans and noto_math:
+		var target_fonts = [
+			"res://assets/fonts/ChakraPetch-Regular.ttf",
+			"res://assets/fonts/ChakraPetch-Bold.ttf",
+			"res://assets/fonts/TRS-Million Rg.otf",
+			"res://assets/fonts/LEDCalculator.ttf",
+			"res://assets/fonts/Orbitron.ttf"
+		]
+		for font_path in target_fonts:
+			if ResourceLoader.exists(font_path):
+				var f = load(font_path)
+				if f and f is FontFile:
+					if not noto_sans in f.fallbacks:
+						f.fallbacks.append(noto_sans)
+					if not noto_math in f.fallbacks:
+						f.fallbacks.append(noto_math)

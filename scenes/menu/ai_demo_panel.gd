@@ -128,7 +128,7 @@ func _ready() -> void:
 		if next_move_btn != null:
 			next_move_btn.disabled = true
 			
-		explanation_label.text = "REAL-TIME WATCH MODE ACTIVE\nRunning AI vs AI match at full speed without highlighting pauses."
+		explanation_label.text = "REAL-TIME MODE ACTIVE\nWatching the AI play at normal speed."
 		explanation_label.add_theme_color_override("font_color", Color("#ffd700"))
 
 func _process(delta: float) -> void:
@@ -144,13 +144,16 @@ func update_real_time_telemetry() -> void:
 	# Query current statistics from active AI Module of P1 Red
 	var red_ai = gameplay.player_red.get("ai_module")
 	if red_ai != null and is_instance_valid(red_ai):
-		depth_lbl.text = "Search Depth: %d" % red_ai.last_depth
-		nodes_lbl.text = "Nodes Evaluated: %d" % red_ai.last_nodes_evaluated
-	alpha_lbl.text = "Alpha Bound: DYNAMIC"
-	beta_lbl.text = "Beta Bound: DYNAMIC"
-	value_lbl.text = "Branch Score: DYNAMIC"
+		depth_lbl.text = str(red_ai.last_depth)
+		nodes_lbl.text = str(red_ai.last_nodes_evaluated)
+	alpha_lbl.text = "DYNAMIC"
+	beta_lbl.text = "DYNAMIC"
+	value_lbl.text = "DYNAMIC"
 
 func setup_left_sidebar() -> void:
+	var font_reg = load("res://assets/fonts/ChakraPetch-Regular.ttf")
+	var font_bold = load("res://assets/fonts/ChakraPetch-Bold.ttf")
+
 	var sidebar = PanelContainer.new()
 	sidebar.name = "LeftSidebar"
 	sidebar.position = Vector2(30, 60)
@@ -158,10 +161,12 @@ func setup_left_sidebar() -> void:
 	
 	var style = StyleBoxFlat.new()
 	style.bg_color = Color("#0c0e14")
-	style.border_color = Color("#ff2a7a") # Glowing P1 Red secondary boundary
-	style.set_border_width_all(2)
+	style.border_color = Color("#1d212f")
+	style.set_border_width_all(1)
+	style.border_width_left = 5
+	style.border_color = Color("#ff2a7a") # Glowing P1 Red left boundary
 	style.set_corner_radius_all(10)
-	style.shadow_color = Color(1.0, 0.16, 0.48, 0.1)
+	style.shadow_color = Color(1.0, 1.0, 1.0, 0.08) # Neon White shadow
 	style.shadow_size = 12
 	sidebar.add_theme_stylebox_override("panel", style)
 	
@@ -177,56 +182,66 @@ func setup_left_sidebar() -> void:
 	margin.add_child(vbox)
 	
 	var title = Label.new()
-	title.text = "AI VISUAL DEBUGGER"
+	title.text = "AI VISUALIZER"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_color_override("font_color", Color("#ff2a7a"))
 	title.add_theme_font_size_override("font_size", 16)
+	if font_bold != null:
+		title.add_theme_font_override("font", font_bold)
 	vbox.add_child(title)
 	
 	var subtitle = Label.new()
-	subtitle.text = "P1 RED AI SEARCH ENGINE"
+	subtitle.text = "AI SEARCH TREE"
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	subtitle.add_theme_color_override("font_color", Color("#606575"))
 	subtitle.add_theme_font_size_override("font_size", 10)
+	if font_reg != null:
+		subtitle.add_theme_font_override("font", font_reg)
 	vbox.add_child(subtitle)
 	
 	vbox.add_child(HSeparator.new())
 	
-	# Telemetry Data Grid
-	var grid = GridContainer.new()
-	grid.columns = 1
-	grid.add_theme_constant_override("v_separation", 6)
-	vbox.add_child(grid)
+	# Telemetry Data Grid (Structured 3-column rows)
+	var t_grid = GridContainer.new()
+	t_grid.columns = 3
+	t_grid.add_theme_constant_override("h_separation", 6)
+	t_grid.add_theme_constant_override("v_separation", 8)
+	t_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox.add_child(t_grid)
 	
-	depth_lbl = Label.new()
-	depth_lbl.text = "Search Depth: 0"
-	depth_lbl.add_theme_color_override("font_color", Color("#d0d5e5"))
-	depth_lbl.add_theme_font_size_override("font_size", 12)
-	grid.add_child(depth_lbl)
-	
-	nodes_lbl = Label.new()
-	nodes_lbl.text = "Nodes Evaluated: 0"
-	nodes_lbl.add_theme_color_override("font_color", Color("#d0d5e5"))
-	nodes_lbl.add_theme_font_size_override("font_size", 12)
-	grid.add_child(nodes_lbl)
-	
-	alpha_lbl = Label.new()
-	alpha_lbl.text = "Alpha Bound: -INF"
-	alpha_lbl.add_theme_color_override("font_color", Color("#39ff14")) # Neon green
-	alpha_lbl.add_theme_font_size_override("font_size", 12)
-	grid.add_child(alpha_lbl)
-	
-	beta_lbl = Label.new()
-	beta_lbl.text = "Beta Bound: INF"
-	beta_lbl.add_theme_color_override("font_color", Color("#00f0ff")) # Neon cyan
-	beta_lbl.add_theme_font_size_override("font_size", 12)
-	grid.add_child(beta_lbl)
-	
-	value_lbl = Label.new()
-	value_lbl.text = "Branch Score: 0.0"
-	value_lbl.add_theme_color_override("font_color", Color("#ffd700")) # Neon gold
-	value_lbl.add_theme_font_size_override("font_size", 12)
-	grid.add_child(value_lbl)
+	var add_telemetry_row = func(grid_node: GridContainer, label_text: String, bullet_color: Color):
+		var bullet = Label.new()
+		bullet.text = ">"
+		bullet.add_theme_color_override("font_color", bullet_color)
+		bullet.add_theme_font_size_override("font_size", 10)
+		if font_bold != null:
+			bullet.add_theme_font_override("font", font_bold)
+		grid_node.add_child(bullet)
+		
+		var name_lbl = Label.new()
+		name_lbl.text = label_text
+		name_lbl.add_theme_font_size_override("font_size", 11)
+		name_lbl.add_theme_color_override("font_color", Color("#a0a5b5"))
+		if font_reg != null:
+			name_lbl.add_theme_font_override("font", font_reg)
+		grid_node.add_child(name_lbl)
+		
+		var val_lbl = Label.new()
+		val_lbl.text = "0"
+		val_lbl.add_theme_font_size_override("font_size", 11)
+		val_lbl.add_theme_color_override("font_color", Color.WHITE)
+		val_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		val_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		if font_reg != null:
+			val_lbl.add_theme_font_override("font", font_reg)
+		grid_node.add_child(val_lbl)
+		return val_lbl
+
+	depth_lbl = add_telemetry_row.call(t_grid, "Search Depth", Color("#ff2a7a"))
+	nodes_lbl = add_telemetry_row.call(t_grid, "Nodes Evaluated", Color("#ff2a7a"))
+	alpha_lbl = add_telemetry_row.call(t_grid, "Alpha Bound", Color("#39ff14"))
+	beta_lbl = add_telemetry_row.call(t_grid, "Beta Bound", Color("#00f0ff"))
+	value_lbl = add_telemetry_row.call(t_grid, "Branch Score", Color("#ffd700"))
 	
 	vbox.add_child(HSeparator.new())
 	
@@ -265,9 +280,11 @@ func setup_left_sidebar() -> void:
 	
 	# Explanation Walkthrough Box
 	var exp_title = Label.new()
-	exp_title.text = "EXECUTION LOG & MATH"
+	exp_title.text = "EXECUTION LOG"
 	exp_title.add_theme_color_override("font_color", Color("#a0a5b5"))
 	exp_title.add_theme_font_size_override("font_size", 11)
+	if font_bold != null:
+		exp_title.add_theme_font_override("font", font_bold)
 	vbox.add_child(exp_title)
 	
 	var exp_panel = PanelContainer.new()
@@ -291,6 +308,8 @@ func setup_left_sidebar() -> void:
 	explanation_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 	explanation_label.add_theme_color_override("font_color", Color("#a0a5b5"))
 	explanation_label.add_theme_font_size_override("font_size", 11)
+	if font_reg != null:
+		explanation_label.add_theme_font_override("font", font_reg)
 	exp_margin.add_child(explanation_label)
 	
 	vbox.add_child(exp_panel)
@@ -319,6 +338,8 @@ func setup_left_sidebar() -> void:
 	back_btn.add_theme_color_override("font_color", Color("#a0a5b5"))
 	back_btn.add_theme_color_override("font_hover_color", Color.WHITE)
 	back_btn.add_theme_font_size_override("font_size", 12)
+	if font_reg != null:
+		back_btn.add_theme_font_override("font", font_reg)
 	
 	back_btn.pressed.connect(_on_back_pressed)
 	vbox.add_child(back_btn)
@@ -367,6 +388,9 @@ func create_stepper_btn(icon_path: String, callback: Callable, tooltip: String, 
 	return container
 
 func setup_right_sidebar() -> void:
+	var font_reg = load("res://assets/fonts/ChakraPetch-Regular.ttf")
+	var font_bold = load("res://assets/fonts/ChakraPetch-Bold.ttf")
+
 	var sidebar = PanelContainer.new()
 	sidebar.name = "RightSidebar"
 	sidebar.position = Vector2(840, 60)
@@ -374,10 +398,12 @@ func setup_right_sidebar() -> void:
 	
 	var style = StyleBoxFlat.new()
 	style.bg_color = Color("#0c0e14")
-	style.border_color = Color("#00f0ff") # Neon cyan secondary border
-	style.set_border_width_all(2)
+	style.border_color = Color("#1d212f")
+	style.set_border_width_all(1)
+	style.border_width_right = 5
+	style.border_color = Color("#00f0ff") # Neon cyan right border accent
 	style.set_corner_radius_all(10)
-	style.shadow_color = Color(0.0, 0.94, 1.0, 0.1)
+	style.shadow_color = Color(1.0, 1.0, 1.0, 0.08) # Neon White shadow
 	style.shadow_size = 12
 	sidebar.add_theme_stylebox_override("panel", style)
 	
@@ -397,6 +423,8 @@ func setup_right_sidebar() -> void:
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_color_override("font_color", Color("#00f0ff"))
 	title.add_theme_font_size_override("font_size", 16)
+	if font_bold != null:
+		title.add_theme_font_override("font", font_bold)
 	vbox.add_child(title)
 	
 	var subtitle = Label.new()
@@ -404,6 +432,8 @@ func setup_right_sidebar() -> void:
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	subtitle.add_theme_color_override("font_color", Color("#606575"))
 	subtitle.add_theme_font_size_override("font_size", 10)
+	if font_reg != null:
+		subtitle.add_theme_font_override("font", font_reg)
 	vbox.add_child(subtitle)
 	
 	vbox.add_child(HSeparator.new())
@@ -436,12 +466,16 @@ func setup_right_sidebar() -> void:
 		num_lbl.text = "%02d " % (i + 1)
 		num_lbl.add_theme_color_override("font_color", Color("#00f0ff")) # Cyan numbers
 		num_lbl.add_theme_font_size_override("font_size", 9)
+		if font_bold != null:
+			num_lbl.add_theme_font_override("font", font_bold)
 		hbox.add_child(num_lbl)
 		
 		var code_lbl = Label.new()
 		code_lbl.text = PSEUDOCODE[i]
 		code_lbl.add_theme_color_override("font_color", Color("#a0a5b5"))
 		code_lbl.add_theme_font_size_override("font_size", 9)
+		if font_reg != null:
+			code_lbl.add_theme_font_override("font", font_reg)
 		hbox.add_child(code_lbl)
 		
 		code_list.add_child(line_container)
@@ -514,16 +548,16 @@ func show_step(index: int) -> void:
 	var step = trace_steps[trace_index]
 	
 	# Update Sidebar Data Grid Labels
-	depth_lbl.text = "Search Depth: %d" % step.depth
-	nodes_lbl.text = "Nodes Evaluated: %d" % step.nodes_evaluated
-	alpha_lbl.text = "Alpha Bound: %.1f" % step.alpha
-	beta_lbl.text = "Beta Bound: %.1f" % step.beta
+	depth_lbl.text = str(step.depth)
+	nodes_lbl.text = str(step.nodes_evaluated)
+	alpha_lbl.text = "%.1f" % step.alpha
+	beta_lbl.text = "%.1f" % step.beta
 	
 	# Format score display neatly
 	if step.line_num in [4, 10, 12, 17, 22, 24, 29]:
-		value_lbl.text = "Branch Score: %.1f" % step.val
+		value_lbl.text = "%.1f" % step.val
 	else:
-		value_lbl.text = "Branch Score: PENDING"
+		value_lbl.text = "PENDING"
 		
 	explanation_label.text = step.explanation
 	

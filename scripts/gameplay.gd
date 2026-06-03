@@ -285,6 +285,22 @@ func _on_tick_timer_timeout() -> void:
 		blue_crashed = true
 		
 	if red_crashed or blue_crashed:
+		# Stop timers immediately to freeze players in place during explosion
+		tick_timer.stop()
+		round_clock_timer.stop()
+		
+		# Spawn collision visuals/animations at crash site
+		if red_crashed and blue_crashed:
+			if next_red == next_blue:
+				spawn_collision_effect(next_red, Color("#ffd700")) # Gold for head-on clash!
+			else:
+				spawn_collision_effect(next_red, Color("#ff2a7a")) # Pink for Red crash
+				spawn_collision_effect(next_blue, Color("#00f0ff")) # Cyan for Blue crash
+		elif red_crashed:
+			spawn_collision_effect(next_red, Color("#ff2a7a")) # Pink for Red crash
+		elif blue_crashed:
+			spawn_collision_effect(next_blue, Color("#00f0ff")) # Cyan for Blue crash
+
 		var round_outcome = ""
 		var winner_text = ""
 		if red_crashed and blue_crashed:
@@ -299,6 +315,8 @@ func _on_tick_timer_timeout() -> void:
 			var red_name = "AI 1" if ConfigManager.red_is_ai else "Player 1"
 			winner_text = "Round %d %s wins the round!" % [current_round, red_name]
 			
+		# Wait 1.5 seconds for collision animation to finish playing before showing results screen
+		await get_tree().create_timer(1.5).timeout
 		handle_round_over(round_outcome, winner_text)
 		return
 	
@@ -982,10 +1000,10 @@ class PlayerHeadCircle extends Node2D:
 		glow_color = p_glow_color
 		
 	func _draw() -> void:
-		# 1. Draw glowing outer shadow rings
+		# 1. Draw glowing outer shadow rings (lessened spread for premium look)
 		for i in range(3):
-			var radius = 10.0 + (3 - i) * 3.0
-			var alpha = 0.15 + i * 0.12
+			var radius = 10.0 + (3 - i) * 1.5
+			var alpha = 0.08 + i * 0.07
 			draw_circle(Vector2.ZERO, radius, Color(glow_color.r, glow_color.g, glow_color.b, alpha))
 			
 		# 2. Draw the solid neon head circle
@@ -1056,3 +1074,34 @@ func update_head_rotation(player: BasePlayer, direction: Vector2i) -> void:
 	if head != null:
 		# Convert Vector2i direction into a rotation angle in radians
 		head.rotation = Vector2(direction).angle()
+
+func spawn_collision_effect(grid_pos: Vector2i, color: Color) -> void:
+	var effect = CrashExplosionNode.new()
+	effect.position = tile_to_pixel(grid_pos)
+	effect.color = color
+	add_child(effect)
+
+# Custom 2D Node to draw a glowing collision explosion at the crash coordinates
+class CrashExplosionNode extends Node2D:
+	var color: Color
+	var pulse: float = 0.0
+	
+	func _ready() -> void:
+		z_index = 10 # Draw above player sprites and tiles
+		process_mode = Node.PROCESS_MODE_ALWAYS # Run even when game state halts
+		var tween = create_tween()
+		tween.tween_property(self, "pulse", 2.0, 0.65).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		tween.tween_callback(queue_free) # Destroy self when done!
+		
+	func _process(_delta: float) -> void:
+		queue_redraw()
+		
+	func _draw() -> void:
+		var cell_size = 30.0
+		var radius = clamp(pulse * cell_size, 0.0, cell_size * 2.0)
+		var alpha = clamp(1.0 - pulse / 2.0, 0.0, 1.0)
+		
+		# Draw outer fading circle in player/crash color (pink, cyan, or gold)
+		draw_circle(Vector2.ZERO, radius, Color(color.r, color.g, color.b, alpha * 0.7))
+		# Draw inner glowing yellow core matching rules panel simulator
+		draw_circle(Vector2.ZERO, radius * 0.5, Color(1.0, 0.9, 0.2, alpha * 0.8))

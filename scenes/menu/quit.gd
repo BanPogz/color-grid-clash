@@ -13,7 +13,7 @@ func _ready() -> void:
 	control.add_child(vbox)
 	
 	var prompt = Label.new()
-	prompt.text = "TERMINATE PROTOCOL?\n\nAre you sure you want to quit the game?"
+	prompt.text = "QUIT GAME?\n\nAre you sure you want to exit?"
 	prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	prompt.add_theme_color_override("font_color", Color("#ff2a7a"))
 	prompt.add_theme_font_size_override("font_size", 20)
@@ -26,13 +26,13 @@ func _ready() -> void:
 	
 	var yes_btn = Button.new()
 	yes_btn.name = "YesButton"
-	yes_btn.text = "YES, QUIT"
+	yes_btn.text = "YES"
 	yes_btn.custom_minimum_size = Vector2(150, 40)
 	hbox.add_child(yes_btn)
 	
 	var no_btn = Button.new()
 	no_btn.name = "NoButton"
-	no_btn.text = "NO, RETURN"
+	no_btn.text = "NO"
 	no_btn.custom_minimum_size = Vector2(150, 40)
 	hbox.add_child(no_btn)
 	

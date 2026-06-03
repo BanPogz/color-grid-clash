@@ -124,7 +124,7 @@ func create_telemetry_box(player_id: int) -> PanelContainer:
 	ai_margin.add_child(ai_vbox)
 	
 	var ai_title = Label.new()
-	ai_title.text = "MINIMAX TELEMETRY"
+	ai_title.text = "AI STATUS"
 	ai_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	ai_title.add_theme_font_size_override("font_size", 12)
 	ai_title.add_theme_color_override("font_color", Color("#ff2a7a") if player_id == 1 else Color("#00f0ff"))
@@ -345,7 +345,7 @@ func _ready() -> void:
 	left_cores_box.add_child(left_grid)
 	
 	var lbl_cores_t = Label.new()
-	lbl_cores_t.text = "⬡ Basic Cores:"
+	lbl_cores_t.text = "Basic Cores:"
 	lbl_cores_t.add_theme_font_size_override("font_size", 14)
 	lbl_cores_t.add_theme_color_override("font_color", Color("#39ff14"))
 	lbl_cores_t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -359,7 +359,7 @@ func _ready() -> void:
 	left_grid.add_child(left_cores_label)
 	
 	var lbl_rare_t = Label.new()
-	lbl_rare_t.text = "✦ Rare Cores:"
+	lbl_rare_t.text = "Rare Cores:"
 	lbl_rare_t.add_theme_font_size_override("font_size", 14)
 	lbl_rare_t.add_theme_color_override("font_color", Color("#ffd700"))
 	lbl_rare_t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -516,7 +516,7 @@ func _ready() -> void:
 	right_cores_box.add_child(right_grid)
 	
 	var lbl_cores_t2 = Label.new()
-	lbl_cores_t2.text = "⬡ Basic Cores:"
+	lbl_cores_t2.text = "Basic Cores:"
 	lbl_cores_t2.add_theme_font_size_override("font_size", 14)
 	lbl_cores_t2.add_theme_color_override("font_color", Color("#39ff14"))
 	lbl_cores_t2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -530,7 +530,7 @@ func _ready() -> void:
 	right_grid.add_child(right_cores_label)
 	
 	var lbl_rare_t2 = Label.new()
-	lbl_rare_t2.text = "✦ Rare Cores:"
+	lbl_rare_t2.text = "Rare Cores:"
 	lbl_rare_t2.add_theme_font_size_override("font_size", 14)
 	lbl_rare_t2.add_theme_color_override("font_color", Color("#ffd700"))
 	lbl_rare_t2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -587,7 +587,8 @@ func _ready() -> void:
 	
 	round_title = Label.new()
 	round_title.text = "ROUND 1 of 5"
-	round_title.add_theme_font_size_override("font_size", 14)
+	round_title.add_theme_font_override("font", preload("res://assets/fonts/LEDCalculator.ttf"))
+	round_title.add_theme_font_size_override("font_size", 24)
 	round_title.add_theme_color_override("font_color", Color.WHITE)
 	top_hud.add_child(round_title)
 	
@@ -611,10 +612,16 @@ func _ready() -> void:
 	top_hud.add_child(round_indicators)
 	
 	for i in range(ConfigManager.max_rounds):
-		var indicator = Label.new()
-		indicator.text = "○"
-		indicator.add_theme_font_size_override("font_size", 14)
-		indicator.add_theme_color_override("font_color", Color("#606575"))
+		var indicator = Panel.new()
+		indicator.custom_minimum_size = Vector2(10, 10)
+		indicator.size = Vector2(10, 10)
+		
+		var style = StyleBoxFlat.new()
+		style.bg_color = Color.TRANSPARENT
+		style.border_color = Color("#606575")
+		style.set_border_width_all(1)
+		style.set_corner_radius_all(5) # Circular indicator
+		indicator.add_theme_stylebox_override("panel", style)
 		round_indicators.add_child(indicator)
 		
 	# Sleek vertical divider
@@ -633,7 +640,7 @@ func _ready() -> void:
 	timer_label = Label.new()
 	timer_label.text = "00:00"
 	timer_label.add_theme_font_size_override("font_size", 18)
-	timer_label.add_theme_color_override("font_color", Color("#00f0ff")) # Glowing cyber-cyan
+	timer_label.add_theme_color_override("font_color", Color("#ffd700")) # Glowing cyber-gold/yellow
 	timer_label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	top_hud.add_child(timer_label)
 
@@ -663,33 +670,55 @@ func update_round(current_round: int, max_rounds: int, round_history: Array) -> 
 		for child in round_indicators.get_children():
 			child.queue_free()
 		for i in range(max_rounds):
-			var indicator = Label.new()
-			indicator.text = "○"
-			indicator.add_theme_font_size_override("font_size", 14)
-			indicator.add_theme_color_override("font_color", Color("#606575"))
+			var indicator = Panel.new()
+			indicator.custom_minimum_size = Vector2(10, 10)
+			indicator.size = Vector2(10, 10)
+			
+			var style = StyleBoxFlat.new()
+			style.bg_color = Color.TRANSPARENT
+			style.border_color = Color("#606575")
+			style.set_border_width_all(1)
+			style.set_corner_radius_all(5)
+			indicator.add_theme_stylebox_override("panel", style)
 			round_indicators.add_child(indicator)
 	
 	var children = round_indicators.get_children()
 	for i in range(children.size()):
+		var indicator = children[i] as Panel
+		if indicator == null: continue
+		var style = indicator.get_theme_stylebox("panel") as StyleBoxFlat
+		if style == null: continue
+		
+		style = style.duplicate()
+		indicator.add_theme_stylebox_override("panel", style)
+		
 		if i < round_history.size():
 			var outcome = round_history[i]
+			style.set_border_width_all(0) # Filled circle
 			if outcome == "RED":
-				children[i].text = "●"
-				children[i].add_theme_color_override("font_color", Color("#ff2a7a"))
+				style.bg_color = Color("#ff2a7a")
 			elif outcome == "BLUE":
-				children[i].text = "●"
-				children[i].add_theme_color_override("font_color", Color("#00f0ff"))
+				style.bg_color = Color("#00f0ff")
 			elif outcome == "DRAW":
-				children[i].text = "◌"
-				children[i].add_theme_color_override("font_color", Color("#ffaa00"))
+				style.bg_color = Color("#ffd700")
 		else:
-			children[i].text = "○"
-			children[i].add_theme_color_override("font_color", Color("#606575"))
+			style.bg_color = Color.TRANSPARENT
+			style.border_color = Color("#606575")
+			style.set_border_width_all(1)
 
 func update_timer(secs: int) -> void:
 	var mins = secs / 60
 	var rem_secs = secs % 60
 	timer_label.text = "%02d:%02d" % [mins, rem_secs]
+	
+	if ConfigManager.timer_mode == ConfigManager.TimerMode.LIMITED and secs <= 10:
+		# Flash color between neon pink-red and gold yellow on 1-second intervals
+		if (secs % 2) == 0:
+			timer_label.add_theme_color_override("font_color", Color("#ff2a7a"))
+		else:
+			timer_label.add_theme_color_override("font_color", Color("#ffd700"))
+	else:
+		timer_label.add_theme_color_override("font_color", Color("#ffd700"))
 
 func update_red_ai_telemetry(depth: int, time_ms: float, nodes: int) -> void:
 	if red_depth_label != null:
@@ -739,8 +768,9 @@ func setup_countdown_overlay() -> void:
 	countdown_round_label = Label.new()
 	countdown_round_label.text = "ROUND 1"
 	countdown_round_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	countdown_round_label.add_theme_color_override("font_color", Color("#00f0ff")) # Neon cyan
-	countdown_round_label.add_theme_font_size_override("font_size", 36)
+	countdown_round_label.add_theme_color_override("font_color", Color.WHITE)
+	countdown_round_label.add_theme_font_override("font", preload("res://assets/fonts/LEDCalculator.ttf"))
+	countdown_round_label.add_theme_font_size_override("font_size", 64)
 	vbox.add_child(countdown_round_label)
 	
 	var prep_lbl = Label.new()
@@ -753,8 +783,9 @@ func setup_countdown_overlay() -> void:
 	countdown_label = Label.new()
 	countdown_label.text = "3"
 	countdown_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	countdown_label.add_theme_color_override("font_color", Color("#ff2a7a")) # Neon pink
-	countdown_label.add_theme_font_size_override("font_size", 84)
+	countdown_label.add_theme_color_override("font_color", Color.WHITE)
+	countdown_label.add_theme_font_override("font", preload("res://assets/fonts/LEDCalculator.ttf"))
+	countdown_label.add_theme_font_size_override("font_size", 180)
 	countdown_label.pivot_offset = Vector2.ZERO # Calculated dynamically before tweens
 	vbox.add_child(countdown_label)
 
@@ -783,7 +814,7 @@ func start_round_countdown(round_num: int, callback: Callable) -> void:
 	# Play "3" (1.0 second)
 	countdown_label.text = "3"
 	countdown_label.pivot_offset = countdown_label.size / 2.0
-	countdown_label.add_theme_color_override("font_color", Color("#ff2a7a"))
+	countdown_label.add_theme_color_override("font_color", Color.WHITE)
 	countdown_label.modulate.a = 0.0
 	countdown_label.scale = Vector2(1.5, 1.5)
 	var mp = get_node_or_null("/root/MusicPlayer")
@@ -801,7 +832,7 @@ func start_round_countdown(round_num: int, callback: Callable) -> void:
 	# Play "2" (1.0 second)
 	countdown_label.text = "2"
 	countdown_label.pivot_offset = countdown_label.size / 2.0
-	countdown_label.add_theme_color_override("font_color", Color("#ff2a7a"))
+	countdown_label.add_theme_color_override("font_color", Color.WHITE)
 	countdown_label.modulate.a = 0.0
 	countdown_label.scale = Vector2(1.5, 1.5)
 	if mp != null:
@@ -818,7 +849,7 @@ func start_round_countdown(round_num: int, callback: Callable) -> void:
 	# Play "1" (1.0 second)
 	countdown_label.text = "1"
 	countdown_label.pivot_offset = countdown_label.size / 2.0
-	countdown_label.add_theme_color_override("font_color", Color("#ff2a7a"))
+	countdown_label.add_theme_color_override("font_color", Color.WHITE)
 	countdown_label.modulate.a = 0.0
 	countdown_label.scale = Vector2(1.5, 1.5)
 	if mp != null:
@@ -835,7 +866,7 @@ func start_round_countdown(round_num: int, callback: Callable) -> void:
 	# Play "GO!" (0.8 second)
 	countdown_label.text = "GO!"
 	countdown_label.pivot_offset = countdown_label.size / 2.0
-	countdown_label.add_theme_color_override("font_color", Color("#00f0ff"))
+	countdown_label.add_theme_color_override("font_color", Color.WHITE)
 	countdown_label.modulate.a = 0.0
 	countdown_label.scale = Vector2(1.5, 1.5)
 	if mp != null:
@@ -925,7 +956,8 @@ func show_round_results(round_num: int, winner_type: String, winner_text: String
 		panel_color = Color("#00f0ff") # Neon Cyan
 		
 	panel_style.border_color = panel_color
-	panel_style.set_border_width_all(2)
+	panel_style.set_border_width_all(1)
+	panel_style.border_width_left = 5 # Left-accent border
 	panel_style.set_corner_radius_all(10)
 	panel_style.shadow_color = Color(panel_color.r, panel_color.g, panel_color.b, 0.25)
 	panel_style.shadow_size = 12
@@ -983,7 +1015,7 @@ func show_round_results(round_num: int, winner_type: String, winner_text: String
 	if is_ai_vs_ai:
 		next_lbl.text = "PREPARING NEXT ROUND..."
 	else:
-		next_lbl.text = "PRESS ANY CONTROL KEY TO START NEXT ROUND\n[ ESCAPE or BACK TO FORFEIT MATCH ]"
+		next_lbl.text = "PRESS ANY KEY TO START NEXT ROUND\n[ ESCAPE TO QUIT MATCH ]"
 	next_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	if is_ai_vs_ai:
 		next_lbl.add_theme_color_override("font_color", Color("#606575"))
@@ -1103,7 +1135,8 @@ func show_match_results(winner_type: String, winner_text: String, p1_total: int,
 	var panel_style = StyleBoxFlat.new()
 	panel_style.bg_color = Color("#0c0e14")
 	panel_style.border_color = color
-	panel_style.set_border_width_all(2)
+	panel_style.set_border_width_all(1)
+	panel_style.border_width_left = 5 # Left-accent border
 	panel_style.set_corner_radius_all(10)
 	panel_style.shadow_color = Color(color.r, color.g, color.b, 0.2)
 	panel_style.shadow_size = 12
@@ -1233,6 +1266,7 @@ func setup_pause_overlay() -> void:
 	bp_style.bg_color = Color("#0c0e14")
 	bp_style.border_color = Color("#ffd700") # Gold yellow
 	bp_style.set_border_width_all(1)
+	bp_style.border_width_left = 5 # Left-accent border
 	bp_style.set_corner_radius_all(10)
 	bp_style.content_margin_left = 30
 	bp_style.content_margin_right = 30
@@ -1266,7 +1300,7 @@ func setup_pause_overlay() -> void:
 	btn_vbox.add_child(restart_btn)
 	
 	var menu_btn = Button.new()
-	menu_btn.text = "ABORT TO MENU"
+	menu_btn.text = "RETURN TO MENU"
 	menu_btn.custom_minimum_size = Vector2(200, 45)
 	menu_btn.pressed.connect(func():
 		pause_overlay.visible = false

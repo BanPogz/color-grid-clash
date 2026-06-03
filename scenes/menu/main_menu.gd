@@ -47,6 +47,10 @@ func _ready() -> void:
 		vbox.move_child(credits_button, quit_idx)
 
 	# Ensure existing button texts are structured perfectly
+	rules_button.text = "RULES & MECHANICS"
+	rules_button.custom_minimum_size = Vector2(0, 35)
+	stats_button.text = "RECORDS"
+	stats_button.custom_minimum_size = Vector2(0, 35)
 	config_button.text = "CONFIGURATION"
 	config_button.custom_minimum_size = Vector2(0, 35) # match other buttons
 	ai_demo_button.text = "AI VISUAL DEMO"
@@ -70,6 +74,12 @@ func _ready() -> void:
 	
 	# Apply gorgeous neon theme styling programmatically
 	setup_styling()
+	
+	# Wire up button hover scale animations
+	var btn_list = [start_button, controls_button, rules_button, stats_button, config_button, ai_demo_button, credits_button, quit_button]
+	for btn in btn_list:
+		if btn != null:
+			animate_button(btn)
 	
 	# Show rules or default welcome screen in the display panel
 	show_welcome_screen()
@@ -102,23 +112,73 @@ func setup_styling() -> void:
 	# Display panel styling
 	var display_style = StyleBoxFlat.new()
 	display_style.bg_color = Color("#0c0e14")
-	display_style.border_color = Color("#ff2a7a") # Neon Pink
-	display_style.set_border_width_all(2)
+	display_style.set_border_width_all(0) # Border drawn by children overlay panels!
 	display_style.corner_radius_top_left = 10
 	display_style.corner_radius_top_right = 10
 	display_style.corner_radius_bottom_left = 10
 	display_style.corner_radius_bottom_right = 10
-	display_style.shadow_color = Color(1.0, 0.16, 0.48, 0.2) # Neon Pink shadow
+	display_style.shadow_color = Color(1.0, 1.0, 1.0, 0.15) # Neon White shadow
 	display_style.shadow_size = 15
 	display_panel.add_theme_stylebox_override("panel", display_style)
 	
-	# Clean up any split pink-blue border overlay panels
-	var pink_border_panel = display_panel.get_node_or_null("PinkBorderPanel")
-	if pink_border_panel != null:
-		pink_border_panel.queue_free()
-	var blue_border_panel = display_panel.get_node_or_null("BlueBorderPanel")
-	if blue_border_panel != null:
-		blue_border_panel.queue_free()
+	# Create and style the split neon pink/cyan border overlay panels
+	var pink_border = display_panel.get_node_or_null("PinkBorderPanel")
+	if pink_border == null:
+		pink_border = Panel.new()
+		pink_border.name = "PinkBorderPanel"
+		pink_border.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		display_panel.add_child(pink_border)
+		
+	pink_border.anchor_left = 0.0
+	pink_border.anchor_top = 0.0
+	pink_border.anchor_right = 0.5
+	pink_border.anchor_bottom = 1.0
+	pink_border.offset_left = 0
+	pink_border.offset_top = 0
+	pink_border.offset_right = 0
+	pink_border.offset_bottom = 0
+		
+	var pink_style = StyleBoxFlat.new()
+	pink_style.bg_color = Color.TRANSPARENT
+	pink_style.border_color = Color("#ff2a7a") # Neon Pink (left half)
+	pink_style.border_width_left = 2
+	pink_style.border_width_top = 2
+	pink_style.border_width_right = 0
+	pink_style.border_width_bottom = 2
+	pink_style.corner_radius_top_left = 10
+	pink_style.corner_radius_top_right = 0
+	pink_style.corner_radius_bottom_left = 10
+	pink_style.corner_radius_bottom_right = 0
+	pink_border.add_theme_stylebox_override("panel", pink_style)
+	
+	var blue_border = display_panel.get_node_or_null("BlueBorderPanel")
+	if blue_border == null:
+		blue_border = Panel.new()
+		blue_border.name = "BlueBorderPanel"
+		blue_border.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		display_panel.add_child(blue_border)
+		
+	blue_border.anchor_left = 0.5
+	blue_border.anchor_top = 0.0
+	blue_border.anchor_right = 1.0
+	blue_border.anchor_bottom = 1.0
+	blue_border.offset_left = 0
+	blue_border.offset_top = 0
+	blue_border.offset_right = 0
+	blue_border.offset_bottom = 0
+		
+	var blue_style = StyleBoxFlat.new()
+	blue_style.bg_color = Color.TRANSPARENT
+	blue_style.border_color = Color("#00f0ff") # Neon Cyan (right half)
+	blue_style.border_width_left = 0
+	blue_style.border_width_top = 2
+	blue_style.border_width_right = 2
+	blue_style.border_width_bottom = 2
+	blue_style.corner_radius_top_left = 0
+	blue_style.corner_radius_top_right = 10
+	blue_style.corner_radius_bottom_left = 0
+	blue_style.corner_radius_bottom_right = 10
+	blue_border.add_theme_stylebox_override("panel", blue_style)
 	
 	# Style buttons
 	var buttons = [start_button, controls_button, rules_button, stats_button, config_button, ai_demo_button, credits_button, quit_button]
@@ -205,48 +265,84 @@ func _on_config_pressed() -> void:
 	set_display_content(inst)
 
 func _on_ai_demo_pressed() -> void:
+	var font_reg = load("res://assets/fonts/ChakraPetch-Regular.ttf")
+	var font_bold = load("res://assets/fonts/ChakraPetch-Bold.ttf")
+
 	var demo_select = VBoxContainer.new()
 	demo_select.name = "DemoSelectPanel"
-	demo_select.alignment = BoxContainer.ALIGNMENT_CENTER
 	demo_select.add_theme_constant_override("separation", 15)
 	
 	var title = Label.new()
-	title.text = "SELECT AI VISUAL DEMO MODE"
+	title.text = "AI VISUAL DEMO"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_color_override("font_color", Color("#00f0ff")) # Glowing cyan
+	title.add_theme_color_override("font_color", Color.WHITE) # Neutral white
 	title.add_theme_font_size_override("font_size", 20)
+	if font_bold != null:
+		title.add_theme_font_override("font", font_bold)
 	demo_select.add_child(title)
 	
-	# Accent separator
-	var sep = ColorRect.new()
-	sep.custom_minimum_size = Vector2(0, 2)
-	sep.color = Color("#a12aff") # Electric purple line
-	demo_select.add_child(sep)
+	# Clean Neutral White Divider
+	var div = ColorRect.new()
+	div.custom_minimum_size = Vector2(180, 2)
+	div.color = Color(1.0, 1.0, 1.0, 0.15) # Subtle white line
+	div.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	demo_select.add_child(div)
+	
+	# Styled Card Container
+	var card = PanelContainer.new()
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	card.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	
+	var card_style = StyleBoxFlat.new()
+	card_style.bg_color = Color("#11131c")
+	card_style.border_color = Color("#1d212f") # Subtle slate gray border
+	card_style.set_border_width_all(1)
+	card_style.set_corner_radius_all(6)
+	card_style.content_margin_left = 20
+	card_style.content_margin_right = 20
+	card_style.content_margin_top = 15
+	card_style.content_margin_bottom = 15
+	card_style.shadow_color = Color(0, 0, 0, 0.2) # Deep neutral drop shadow
+	card_style.shadow_size = 10
+	card.add_theme_stylebox_override("panel", card_style)
+	demo_select.add_child(card)
+	
+	var card_vbox = VBoxContainer.new()
+	card_vbox.add_theme_constant_override("separation", 12)
+	card_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	card.add_child(card_vbox)
 	
 	var desc = Label.new()
-	desc.text = "Experience step-by-step code execution & board heuristic visualizers."
+	desc.text = "Experience step-by-step minimax search and heuristics visualizers."
 	desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	desc.add_theme_color_override("font_color", Color("#606575"))
+	desc.add_theme_color_override("font_color", Color("#a0a5b5"))
 	desc.add_theme_font_size_override("font_size", 12)
-	demo_select.add_child(desc)
+	if font_reg != null:
+		desc.add_theme_font_override("font", font_reg)
+	card_vbox.add_child(desc)
+	
+	# Spacer
+	var spacer = Control.new()
+	spacer.custom_minimum_size = Vector2(0, 5)
+	card_vbox.add_child(spacer)
 	
 	var btn_realtime = Button.new()
-	btn_realtime.text = "REAL-TIME WATCH MODE\nRun AI vs. AI match at full speed without highlighting pauses."
+	btn_realtime.text = "REAL-TIME WATCH MODE\nWatch the AI play at normal speed."
 	style_demo_selector_btn(btn_realtime)
 	btn_realtime.pressed.connect(func(): start_ai_demo(ConfigManager.DemoMode.REAL_TIME))
-	demo_select.add_child(btn_realtime)
+	card_vbox.add_child(btn_realtime)
 	
 	var btn_slowmo = Button.new()
-	btn_slowmo.text = "SLOW MOTION WALKTHROUGH\nAutomatically steps code execution line-by-line."
+	btn_slowmo.text = "SLOW MOTION MODE\nAutomatically step through search execution."
 	style_demo_selector_btn(btn_slowmo)
 	btn_slowmo.pressed.connect(func(): start_ai_demo(ConfigManager.DemoMode.SLOW_MOTION))
-	demo_select.add_child(btn_slowmo)
+	card_vbox.add_child(btn_slowmo)
 	
 	var btn_step = Button.new()
-	btn_step.text = "LINE-BY-LINE STEPPING\nPause game execution and step manually using stepper deck."
+	btn_step.text = "STEP-BY-STEP MODE\nManually control code stepping using controls."
 	style_demo_selector_btn(btn_step)
 	btn_step.pressed.connect(func(): start_ai_demo(ConfigManager.DemoMode.LINE_BY_LINE))
-	demo_select.add_child(btn_step)
+	card_vbox.add_child(btn_step)
 	
 	set_display_content(demo_select)
 	btn_step.grab_focus() # Focus the line-by-line mode initially for convenience!
@@ -263,6 +359,10 @@ func start_ai_demo(mode: int) -> void:
 
 func style_demo_selector_btn(btn: Button) -> void:
 	btn.custom_minimum_size = Vector2(500, 50)
+	
+	var font_reg = load("res://assets/fonts/ChakraPetch-Regular.ttf")
+	if font_reg != null:
+		btn.add_theme_font_override("font", font_reg)
 	
 	var btn_normal = StyleBoxFlat.new()
 	btn_normal.bg_color = Color("#12141c")
@@ -313,29 +413,54 @@ func _on_quit_cancelled() -> void:
 	quit_button.grab_focus() # Refocus the quit button on cancel
 
 func _on_credits_pressed() -> void:
+	var font_reg = load("res://assets/fonts/ChakraPetch-Regular.ttf")
+	var font_bold = load("res://assets/fonts/ChakraPetch-Bold.ttf")
+
 	var credits_panel_node = VBoxContainer.new()
 	credits_panel_node.name = "CreditsPanel"
-	credits_panel_node.alignment = BoxContainer.ALIGNMENT_CENTER
 	credits_panel_node.add_theme_constant_override("separation", 15)
 	
 	var title = Label.new()
-	title.text = "ACADEMIC PROJECT CREDITS"
+	title.text = "PROJECT CREDITS"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_color_override("font_color", Color("#00f0ff")) # Glowing cyan
+	title.add_theme_color_override("font_color", Color.WHITE) # Neutral white
 	title.add_theme_font_size_override("font_size", 20)
+	if font_bold != null:
+		title.add_theme_font_override("font", font_bold)
 	credits_panel_node.add_child(title)
 	
-	# Accent separator line
-	var sep = ColorRect.new()
-	sep.custom_minimum_size = Vector2(0, 2)
-	sep.color = Color("#a12aff") # Electric purple line
-	credits_panel_node.add_child(sep)
+	# Clean Neutral White Divider
+	var div = ColorRect.new()
+	div.custom_minimum_size = Vector2(180, 2)
+	div.color = Color(1.0, 1.0, 1.0, 0.15) # Subtle white line
+	div.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	credits_panel_node.add_child(div)
+	
+	# Styled Card Container (Clean Neutral Styling)
+	var card = PanelContainer.new()
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	card.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	
+	var card_style = StyleBoxFlat.new()
+	card_style.bg_color = Color("#11131c")
+	card_style.border_color = Color("#1d212f") # Subtle slate gray border
+	card_style.set_border_width_all(1)
+	card_style.set_corner_radius_all(6)
+	card_style.content_margin_left = 18
+	card_style.content_margin_right = 18
+	card_style.content_margin_top = 18
+	card_style.content_margin_bottom = 18
+	card_style.shadow_color = Color(0, 0, 0, 0.2) # Deep neutral drop shadow
+	card_style.shadow_size = 10
+	card.add_theme_stylebox_override("panel", card_style)
+	credits_panel_node.add_child(card)
 	
 	# ScrollContainer to hold details and prevent any potential text cutoff
 	var scroll = ScrollContainer.new()
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	credits_panel_node.add_child(scroll)
+	card.add_child(scroll)
 	
 	var rtl = RichTextLabel.new()
 	rtl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -343,30 +468,27 @@ func _on_credits_pressed() -> void:
 	rtl.bbcode_enabled = true
 	rtl.fit_content = true
 	
-	var default_font = quit_button.get_theme_font("font")
-	if default_font != null:
-		rtl.add_theme_font_override("normal_font", default_font)
-		rtl.add_theme_font_override("bold_font", default_font)
-		rtl.add_theme_font_override("italics_font", default_font)
+	if font_reg != null:
+		rtl.add_theme_font_override("normal_font", font_reg)
+		rtl.add_theme_font_override("bold_font", font_bold if font_bold != null else font_reg)
+		rtl.add_theme_font_override("italics_font", font_reg)
 		
 	rtl.add_theme_font_size_override("normal_font_size", 12)
 	rtl.add_theme_font_size_override("bold_font_size", 12)
 	rtl.add_theme_font_size_override("italics_font_size", 12)
 	
-	var bb_text = "[center]"
-	bb_text += "[color=#ff2a7a][font_size=18][b]DISCLAIMER[/b][/font_size][/color]\n\n"
-	bb_text += "[color=#d0d5e5]This game was developed by [color=#00f0ff][b]Group 2[/b][/color] of [color=#00f0ff][b]BSCS 3-3[/b][/color] as a project requirement for the [color=#ffd700][b]Introduction to Artificial Intelligence[/b][/color] course under the Bachelor of Science in Computer Science (BSCS) program at the [color=#39ff14][b]College of Computer and Information Sciences (CCIS)[/b][/color], [color=#00f0ff][b]Polytechnic University of the Philippines (PUP) – Sta. Mesa, Manila[/b][/color]. This project was created solely for academic, educational, and demonstration purposes.[/color]\n\n\n"
-	bb_text += "[color=#ff2a7a][font_size=16][b]DEVELOPMENT TEAM (GROUP 2)[/b][/font_size][/color]\n\n"
-	bb_text += "[color=#ffd700][b]Fiona Mikaela Beatriz Alberto[/b][/color]\n"
-	bb_text += "[color=#ffd700][b]Van Ernest Molo[/b][/color]\n"
-	bb_text += "[color=#ffd700][b]Nichole Shaynne Odion[/b][/color]\n"
-	bb_text += "[color=#ffd700][b]Crystal Kylla Viagedor[/b][/color]\n\n\n"
-	bb_text += "[color=#ff2a7a][font_size=16][b]COURSE INFORMATION[/b][/font_size][/color]\n\n"
-	bb_text += "[color=#a0a5b5]Course: [color=#ffd700][b]Introduction to Artificial Intelligence[/b][/color]\n"
-	bb_text += "Institution: [color=#39ff14][b]PUP Sta. Mesa Manila[/b][/color]\n"
-	bb_text += "Section: [color=#00f0ff][b]BSCS 3-3[/b][/color]\n"
-	bb_text += "Group: [color=#00f0ff][b]Group 2[/b][/color][/color]\n"
-	bb_text += "[/center]"
+	var bb_text = ""
+	bb_text += "[color=#ff2a7a][font_size=16][b]DISCLAIMER[/b][/font_size][/color]\n\n"
+	bb_text += "[color=#e2e6f0]This game was developed by [/color][color=#00f0ff][b]Group 2[/b][/color][color=#e2e6f0] of [/color][color=#00f0ff][b]BSCS 3-3[/b][/color][color=#e2e6f0] as a project requirement for the [/color][color=#ffd700][b]Introduction to Artificial Intelligence[/b][/color][color=#e2e6f0] course under the Bachelor of Science in Computer Science program at the [/color][color=#39ff14][b]College of Computer and Information Sciences (CCIS)[/b][/color][color=#e2e6f0], [/color][color=#00f0ff][b]Polytechnic University of the Philippines (PUP) – Sta. Mesa, Manila[/b][/color][color=#e2e6f0]. This project was created solely for academic, educational, and demonstration purposes.[/color]\n\n\n"
+	bb_text += "[color=#ff2a7a][font_size=14][b]DEVELOPMENT TEAM[/b][/font_size][/color]\n\n"
+	bb_text += "[color=#ffd700][b]> Fiona Mikaela Beatriz Alberto[/b][/color]\n"
+	bb_text += "[color=#ffd700][b]> Van Ernest Molo[/b][/color]\n"
+	bb_text += "[color=#ffd700][b]> Nichole Shaynne Odion[/b][/color]\n"
+	bb_text += "[color=#ffd700][b]> Crystal Kylla Viagedor[/b][/color]\n\n\n"
+	bb_text += "[color=#ff2a7a][font_size=14][b]COURSE INFORMATION[/b][/font_size][/color]\n\n"
+	bb_text += "[color=#e2e6f0]Course: [/color][color=#ffd700][b]Introduction to Artificial Intelligence[/b][/color]\n"
+	bb_text += "[color=#e2e6f0]Institution: [/color][color=#39ff14][b]PUP Sta. Mesa, Manila[/b][/color]\n"
+	bb_text += "[color=#e2e6f0]Section: [/color][color=#00f0ff][b]BSCS 3-3[/b][/color][color=#e2e6f0]  ·  [/color][color=#00f0ff][b]Group 2[/b][/color]\n"
 	
 	rtl.text = bb_text
 	scroll.add_child(rtl)
@@ -375,8 +497,18 @@ func _on_credits_pressed() -> void:
 
 func set_display_content(node: Node) -> void:
 	for child in display_panel.get_children():
-		child.queue_free()
+		if child.name != "PinkBorderPanel" and child.name != "BlueBorderPanel":
+			child.queue_free()
 	display_panel.add_child(node)
+	
+	# Move border overlay panels to the bottom of the child list so they are drawn on top
+	var pink = display_panel.get_node_or_null("PinkBorderPanel")
+	if pink != null:
+		display_panel.move_child(pink, display_panel.get_child_count() - 1)
+	var blue = display_panel.get_node_or_null("BlueBorderPanel")
+	if blue != null:
+		display_panel.move_child(blue, display_panel.get_child_count() - 1)
+		
 	if node is Control:
 		node.set_anchors_preset(Control.PRESET_FULL_RECT)
 		node.offset_left = 15
@@ -389,36 +521,68 @@ func set_display_content(node: Node) -> void:
 		tween.tween_property(node, "modulate:a", 1.0, 0.18)
 
 func show_welcome_screen() -> void:
+	var font_reg = load("res://assets/fonts/ChakraPetch-Regular.ttf")
+	var font_bold = load("res://assets/fonts/ChakraPetch-Bold.ttf")
+
+	var welcome_root = Control.new()
+	welcome_root.name = "WelcomeScreen"
+	
+	# Subtle grid background overlay ONLY on the Welcome HUD
+	var grid_bg = TextureRect.new()
+	grid_bg.name = "GridBackground"
+	grid_bg.texture = load("res://assets/grid3.png")
+	grid_bg.stretch_mode = TextureRect.STRETCH_TILE
+	grid_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	grid_bg.self_modulate = Color(0.12, 0.15, 0.22, 0.15) # Faint grid pattern matching gameplay
+	welcome_root.add_child(grid_bg)
+
 	var welcome = VBoxContainer.new()
-	welcome.name = "WelcomeScreen"
 	welcome.alignment = BoxContainer.ALIGNMENT_CENTER
 	welcome.add_theme_constant_override("separation", 16)
+	welcome.set_anchors_preset(Control.PRESET_FULL_RECT)
+	welcome_root.add_child(welcome)
 	
 	var welcome_lbl = Label.new()
 	welcome_lbl.text = "WELCOME TO THE GRID"
 	welcome_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	welcome_lbl.add_theme_color_override("font_color", Color("#ff2a7a"))
-	welcome_lbl.add_theme_font_size_override("font_size", 28)
+	welcome_lbl.add_theme_font_size_override("font_size", 36)
+	if font_bold != null:
+		welcome_lbl.add_theme_font_override("font", font_bold)
 	welcome.add_child(welcome_lbl)
 	
 	var tagline_lbl = Label.new()
 	tagline_lbl.text = "Two Cycles. One Grid. No Mercy."
 	tagline_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	tagline_lbl.add_theme_color_override("font_color", Color("#505565"))
-	tagline_lbl.add_theme_font_size_override("font_size", 13)
+	tagline_lbl.add_theme_color_override("font_color", Color("#606575"))
+	tagline_lbl.add_theme_font_size_override("font_size", 18)
+	if font_reg != null:
+		tagline_lbl.add_theme_font_override("font", font_reg)
 	welcome.add_child(tagline_lbl)
 	
-	var div = ColorRect.new()
-	div.custom_minimum_size = Vector2(180, 1)
-	div.color = Color("#222736")
-	div.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	welcome.add_child(div)
+	# Split-Color Neon Divider
+	var div_hbox = HBoxContainer.new()
+	div_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	div_hbox.add_theme_constant_override("separation", 0)
+	welcome.add_child(div_hbox)
+	
+	var div_pink = ColorRect.new()
+	div_pink.custom_minimum_size = Vector2(90, 2)
+	div_pink.color = Color("#ff2a7a")
+	div_hbox.add_child(div_pink)
+	
+	var div_cyan = ColorRect.new()
+	div_cyan.custom_minimum_size = Vector2(90, 2)
+	div_cyan.color = Color("#00f0ff")
+	div_hbox.add_child(div_cyan)
 	
 	var desc_lbl = Label.new()
 	desc_lbl.text = "Select an option from the left panel to begin."
 	desc_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	desc_lbl.add_theme_color_override("font_color", Color("#404555"))
-	desc_lbl.add_theme_font_size_override("font_size", 12)
+	desc_lbl.add_theme_font_size_override("font_size", 16)
+	if font_reg != null:
+		desc_lbl.add_theme_font_override("font", font_reg)
 	welcome.add_child(desc_lbl)
 	
 	var spacer = Control.new()
@@ -428,50 +592,77 @@ func show_welcome_screen() -> void:
 	var tip_panel = PanelContainer.new()
 	tip_panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	var tip_style = StyleBoxFlat.new()
-	tip_style.bg_color = Color("#0d0f18")
-	tip_style.border_color = Color("#1e2030")
+	tip_style.bg_color = Color("#11131c")
+	tip_style.border_color = Color("#222736")
 	tip_style.set_border_width_all(1)
+	tip_style.border_width_left = 4
+	tip_style.border_color = Color("#ffd700") # Gold Accent Left Border
 	tip_style.set_corner_radius_all(6)
-	tip_style.content_margin_left = 20
-	tip_style.content_margin_right = 20
-	tip_style.content_margin_top = 12
-	tip_style.content_margin_bottom = 12
+	tip_style.content_margin_left = 22
+	tip_style.content_margin_right = 22
+	tip_style.content_margin_top = 14
+	tip_style.content_margin_bottom = 14
+	tip_style.shadow_color = Color(1.0, 0.84, 0.0, 0.04) # Subtle gold glow
+	tip_style.shadow_size = 8
 	tip_panel.add_theme_stylebox_override("panel", tip_style)
 	welcome.add_child(tip_panel)
 	
 	var tip_vbox = VBoxContainer.new()
-	tip_vbox.add_theme_constant_override("separation", 6)
+	tip_vbox.add_theme_constant_override("separation", 8)
 	tip_panel.add_child(tip_vbox)
 	
 	var tip_title = Label.new()
-	tip_title.text = "QUICK TIPS"
+	tip_title.text = "QUICK SYSTEM RULES"
 	tip_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	tip_title.add_theme_color_override("font_color", Color("#ffd700", 0.6))
-	tip_title.add_theme_font_size_override("font_size", 10)
+	tip_title.add_theme_color_override("font_color", Color("#ffd700"))
+	tip_title.add_theme_font_size_override("font_size", 16)
+	if font_bold != null:
+		tip_title.add_theme_font_override("font", font_bold)
 	tip_vbox.add_child(tip_title)
 	
+	# Small separator inside the card
+	var tip_sep = ColorRect.new()
+	tip_sep.custom_minimum_size = Vector2(0, 1)
+	tip_sep.color = Color("#1e2230")
+	tip_vbox.add_child(tip_sep)
+	
 	var tips = [
-		"Use WASD or Arrow Keys to steer your cycle.",
-		"Form closed loops to flood-fill territory and claim Energy Cores.",
-		"Rare Gold Cores are worth 10 pts — prioritize them!",
-		"Head-on collisions are a DRAW — both players crash.",
+		{"text": "Use WASD or Arrow Keys to steer.", "color": Color("#ff2a7a")},
+		{"text": "Enclose areas to capture territory and claim Energy Cores.", "color": Color("#00f0ff")},
+		{"text": "Rare Gold Cores are worth 10 pts — prioritize them!", "color": Color("#ffd700")},
+		{"text": "Head-on collisions result in a DRAW.", "color": Color("#ff2a7a")}
 	]
-	for tip_text in tips:
+	for tip in tips:
+		var tip_hbox = HBoxContainer.new()
+		tip_hbox.add_theme_constant_override("separation", 8)
+		tip_vbox.add_child(tip_hbox)
+		
+		var bullet = Label.new()
+		bullet.text = ">"
+		bullet.add_theme_color_override("font_color", tip.color)
+		bullet.add_theme_font_size_override("font_size", 14)
+		if font_bold != null:
+			bullet.add_theme_font_override("font", font_bold)
+		tip_hbox.add_child(bullet)
+		
 		var tip_lbl = Label.new()
-		tip_lbl.text = "▸  " + tip_text
-		tip_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		tip_lbl.add_theme_color_override("font_color", Color("#3a3d4a"))
-		tip_lbl.add_theme_font_size_override("font_size", 11)
-		tip_vbox.add_child(tip_lbl)
+		tip_lbl.text = tip.text
+		tip_lbl.add_theme_color_override("font_color", Color("#a0a5b5")) # Light gray, highly readable
+		tip_lbl.add_theme_font_size_override("font_size", 14)
+		if font_reg != null:
+			tip_lbl.add_theme_font_override("font", font_reg)
+		tip_hbox.add_child(tip_lbl)
 	
 	var version_lbl = Label.new()
 	version_lbl.text = "v1.2  ·  Group 2  ·  BSCS 3-3  ·  Introduction to Artificial Intelligence"
 	version_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	version_lbl.add_theme_color_override("font_color", Color("#252830"))
-	version_lbl.add_theme_font_size_override("font_size", 10)
+	version_lbl.add_theme_font_size_override("font_size", 13)
+	if font_reg != null:
+		version_lbl.add_theme_font_override("font", font_reg)
 	welcome.add_child(version_lbl)
 	
-	set_display_content(welcome)
+	set_display_content(welcome_root)
 
 
 # --- LIVING ARCADE BACKGROUND SCREENSAVER CLASS ---
@@ -678,3 +869,26 @@ class MenuBackgroundVisualizer extends Control:
 				# Body segment: Draw rounded line segments or solid boxes
 				var rect = Rect2(pixel_pos - Vector2(12, 12), Vector2(24, 24))
 				draw_rect(rect, style_color, true)
+
+func animate_button(btn: Button) -> void:
+	btn.mouse_entered.connect(func():
+		btn.pivot_offset = btn.size / 2.0
+		var tween = btn.create_tween()
+		tween.tween_property(btn, "scale", Vector2(1.03, 1.03), 0.12).set_trans(Tween.TRANS_SINE)
+	)
+	btn.mouse_exited.connect(func():
+		btn.pivot_offset = btn.size / 2.0
+		if not btn.has_focus():
+			var tween = btn.create_tween()
+			tween.tween_property(btn, "scale", Vector2.ONE, 0.12).set_trans(Tween.TRANS_SINE)
+	)
+	btn.focus_entered.connect(func():
+		btn.pivot_offset = btn.size / 2.0
+		var tween = btn.create_tween()
+		tween.tween_property(btn, "scale", Vector2(1.03, 1.03), 0.12).set_trans(Tween.TRANS_SINE)
+	)
+	btn.focus_exited.connect(func():
+		btn.pivot_offset = btn.size / 2.0
+		var tween = btn.create_tween()
+		tween.tween_property(btn, "scale", Vector2.ONE, 0.12).set_trans(Tween.TRANS_SINE)
+	)

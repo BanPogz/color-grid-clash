@@ -3,6 +3,15 @@ extends Control
 
 func _ready() -> void:
 	var control = self
+	
+	# Load and apply modern cybernetic theme font
+	var theme_font = load("res://assets/fonts/ChakraPetch-Regular.ttf")
+	var theme_font_bold = load("res://assets/fonts/ChakraPetch-Bold.ttf")
+	if theme_font != null:
+		var rules_theme = Theme.new()
+		rules_theme.default_font = theme_font
+		control.theme = rules_theme
+		
 	var default_font = load("res://assets/fonts/TRS-Million Rg.otf")
 	
 	var main_margin = MarginContainer.new()
@@ -19,16 +28,19 @@ func _ready() -> void:
 	
 	# Title
 	var title = Label.new()
-	title.text = "GAMEPLAY & SYSTEM MECHANICS"
+	title.text = "RULES & MECHANICS"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_color_override("font_color", Color("#00f0ff")) # Neon cyan
+	title.add_theme_color_override("font_color", Color.WHITE) # Neutral white
 	title.add_theme_font_size_override("font_size", 20)
+	if theme_font_bold != null:
+		title.add_theme_font_override("font", theme_font_bold)
 	vbox.add_child(title)
 	
-	# Accent separator
+	# Clean Neutral White Divider
 	var sep = ColorRect.new()
-	sep.custom_minimum_size = Vector2(0, 2)
-	sep.color = Color("#ff2a7a") # Neon pink
+	sep.custom_minimum_size = Vector2(180, 2)
+	sep.color = Color(1.0, 1.0, 1.0, 0.15) # Subtle white line
+	sep.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	vbox.add_child(sep)
 	
 	# Scroll area for rules content
@@ -83,8 +95,8 @@ func _ready() -> void:
 	# Rule 1
 	var card1 = create_rule_card.call(
 		"01",
-		"Enclosure Flood Fill",
-		"Form a complete loop with your trail that connects back to your existing trail, a wall, or the boundary edges of the grid. Once enclosed, the space will immediately flood with your color. All energy cores inside are claimed, awarding instant points.",
+		"Capture Enclosures",
+		"Close a loop with your trail against your trail, a wall, or the edge of the grid. The enclosed area is captured in your color, and any energy cores inside are claimed instantly for points.",
 		Color("#ffd700")
 	)
 	content_vbox.add_child(card1)
@@ -100,18 +112,11 @@ func _ready() -> void:
 	flood_visualizer.demo_font = default_font
 	f_center.add_child(flood_visualizer)
 	
-	var f_caption = Label.new()
-	f_caption.text = "↓  Live demo — watch a loop close and territory flood in real-time"
-	f_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	f_caption.add_theme_color_override("font_color", Color("#353848"))
-	f_caption.add_theme_font_size_override("font_size", 10)
-	card1_vbox.add_child(f_caption)
-	
 	# Rule 2
 	var card2 = create_rule_card.call(
 		"02",
-		"Scoring Matrix Rules",
-		"Score metrics are calculated based on grid territory and core absorption:\n• Claimed Trail Cell: +1 point\n• Standard Energy Core (Neon Green): +5 points\n• Rare Energy Core (Neon Gold): +10 points (25% spawn chance)\n• Round Win Bonus: +50 points (Draw: +25 points)",
+		"Scoring",
+		"Earn points by capturing tiles, collecting cores, and winning rounds:\n- Claimed Trail Cell: +1 point\n- Standard Core (Green): +5 points\n- Rare Core (Gold): +10 points (25% spawn rate)\n- Round Win Bonus: +50 points (Draw: +25 points)",
 		Color("#ffd700")
 	)
 	content_vbox.add_child(card2)
@@ -127,18 +132,11 @@ func _ready() -> void:
 	scoring_visualizer.demo_font = default_font
 	s_center.add_child(scoring_visualizer)
 	
-	var s_caption = Label.new()
-	s_caption.text = "↓  Live demo — snake absorbing Standard (+5) and Rare Gold (+10) Cores"
-	s_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	s_caption.add_theme_color_override("font_color", Color("#353848"))
-	s_caption.add_theme_font_size_override("font_size", 10)
-	card2_vbox.add_child(s_caption)
-	
 	# Rule 3
 	var card3 = create_rule_card.call(
 		"03",
-		"Championship Rounds",
-		"Each match consists of 5 distinct rounds. The player with the highest total accumulated score at the end wins the match. Spawns and directions are re-randomized every round.",
+		"Matches",
+		"Matches consist of 5 rounds. The player with the highest total score at the end wins the match. Spawn positions are randomized each round.",
 		Color("#ffd700")
 	)
 	content_vbox.add_child(card3)
@@ -153,13 +151,6 @@ func _ready() -> void:
 	var championship_visualizer = ChampionshipDemoVisualizer.new()
 	championship_visualizer.demo_font = default_font
 	c3_center.add_child(championship_visualizer)
-	
-	var c3_caption = Label.new()
-	c3_caption.text = "↓  Live demo — 5-round cycle with re-randomized spawns each round"
-	c3_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	c3_caption.add_theme_color_override("font_color", Color("#353848"))
-	c3_caption.add_theme_font_size_override("font_size", 10)
-	card3_vbox.add_child(c3_caption)
 
 	# Crash Demonstration Card
 	var card4 = PanelContainer.new()
@@ -182,13 +173,13 @@ func _ready() -> void:
 	card4.add_child(c4_vbox)
 	
 	var h4_lbl = Label.new()
-	h4_lbl.text = "04. COLLISION & CRASH RULES"
+	h4_lbl.text = "04. COLLISIONS & CRASHES"
 	h4_lbl.add_theme_color_override("font_color", Color("#ffd700"))
 	h4_lbl.add_theme_font_size_override("font_size", 13)
 	c4_vbox.add_child(h4_lbl)
 	
 	var d4_lbl = Label.new()
-	d4_lbl.text = "Observe real-time simulations of grid collision rules. If a cycle hits a boundary wall, another trail, or collides head-on, it crashes immediately."
+	d4_lbl.text = "Crashing into a wall, an opponent's trail, your own trail, or head-on into another player eliminates you for the round."
 	d4_lbl.add_theme_font_size_override("font_size", 12)
 	d4_lbl.add_theme_color_override("font_color", Color("#a0a5b5"))
 	d4_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD
@@ -196,7 +187,7 @@ func _ready() -> void:
 	
 	# Current Demo status label
 	var status_lbl = Label.new()
-	status_lbl.text = "DEMONSTRATING: WALL COLLISION"
+	status_lbl.text = "SIMULATING: WALL COLLISION"
 	status_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	status_lbl.add_theme_font_size_override("font_size", 11)
 	c4_vbox.add_child(status_lbl)
@@ -270,7 +261,7 @@ class CrashDemoVisualizer extends Control:
 		match current_demo:
 			DemoState.WALL_CRASH:
 				if status_label != null:
-					status_label.text = "ACTIVE SIMULATION: WALL COLLISION (RED)"
+					status_label.text = "SIMULATION: WALL COLLISION (RED)"
 					status_label.add_theme_color_override("font_color", Color("#ff2a7a"))
 				# Red starts left, slithers right to hit a wall block at (10, 5)
 				red_snek = [Vector2i(2, 5), Vector2i(3, 5), Vector2i(4, 5)]
@@ -279,7 +270,7 @@ class CrashDemoVisualizer extends Control:
 				
 			DemoState.TRAIL_CRASH:
 				if status_label != null:
-					status_label.text = "ACTIVE SIMULATION: TRAIL COLLISION (BLUE)"
+					status_label.text = "SIMULATION: TRAIL COLLISION (BLUE)"
 					status_label.add_theme_color_override("font_color", Color("#00f0ff"))
 				# Blue starts top, moving Down into static Red trail at (10, 6)
 				static_red_trail = [Vector2i(6, 6), Vector2i(7, 6), Vector2i(8, 6), Vector2i(9, 6), Vector2i(10, 6), Vector2i(11, 6), Vector2i(12, 6)]
@@ -288,7 +279,7 @@ class CrashDemoVisualizer extends Control:
 				
 			DemoState.HEAD_COLLISION:
 				if status_label != null:
-					status_label.text = "ACTIVE SIMULATION: HEAD-TO-HEAD CRASH (BOTH)"
+					status_label.text = "SIMULATION: HEAD-ON CRASH (BOTH)"
 					status_label.add_theme_color_override("font_color", Color("#ffd700"))
 				# Red moving Right, Blue moving Left, meet at (9, 5)
 				red_snek = [Vector2i(2, 5), Vector2i(3, 5), Vector2i(4, 5)]
