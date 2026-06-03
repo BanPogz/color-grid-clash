@@ -15,6 +15,27 @@ The project features a **symmetrical dual-sidebar UI** with vibrant HSL-calibrat
 
 ---
 
+## 🚀 How to Run the Game
+
+### Running the Pre-compiled Executable (.exe)
+If you have a compiled release of **Color Grid Clash**:
+1. Locate the folder containing the exported game files.
+2. Ensure that the executable (e.g., `ColorGridClash.exe`) and its accompanying package data file (e.g., `ColorGridClash.pck`) are located in the same directory (unless the PCK is embedded within the executable).
+3. Double-click **`ColorGridClash.exe`** to launch the game instantly on Windows.
+4. If prompted by Windows Defender SmartScreen, click *More info* and select *Run anyway* to start the game.
+
+### Exporting to an .exe from Godot Editor
+If you are building the standalone Windows executable yourself:
+1. Open the project in the **Godot Engine 4.x** editor.
+2. Go to the top menu bar and select **Project** -> **Export...**.
+3. If no export preset exists, click **Add...** at the top of the dialog and select **Windows Desktop**.
+4. Configure your export path and options (such as checking "Embed Pck" to produce a single standalone `.exe` file).
+5. Click **Export Project...** at the bottom of the dialog window.
+6. Choose a target folder, name your executable (e.g., `ColorGridClash.exe`), and click **Save**.
+7. Godot will compile the scripts and package the assets into your new standalone executable file.
+
+---
+
 ## 🎮 Rules and Mechanics of the Game
 
 ### 1. Control Bindings & Input System
