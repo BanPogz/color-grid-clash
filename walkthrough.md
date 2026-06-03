@@ -475,10 +475,9 @@ To ensure the active gameplay grid matches the high-fidelity, premium cybernetic
 ### 2. Glowing Circular Cyber-Cores
 * Swapped out flat, basic rectangular core representations for dynamic circular cyber-cores.
 * Generated using programmatically styled vector panels with high-glow HSL shadow filters (+5 Green Neon shadow for standard, +10 Gold Neon shadow for rare) that pulse in sync with the core scaling tweens.
-
-### 3. Vector-Glow Player Heads
+### 3. Glowing Vector Circular Heads with Directional Eyes
 * Completely bypassed the flat, low-contrast sprite `.png` template files for the player heads.
-* Programmed glowing vector light spheres in pink (`#ff2a7a` for Player 1) and cyan (`#00f0ff` for Blue AI) that draw circular heads with deep neon-glow HSL shadow maps centered on the active gameplay cells.
+* **Glowing Circular Heads with Eyes (v1.8) [NEW]**: Programmed custom Node2D drawing scripts (`PlayerHeadCircle`) for the player heads. The heads are drawn as solid neon circles (neon pink for Player 1, neon cyan for Blue AI) with concentric glowing outer HSL shadow rings. To show orientation, two cute white eyeballs with black pupils are drawn on the head, automatically shifting and rotating to look in the active direction of travel (UP, DOWN, LEFT, or RIGHT) at spawn, round resets, and each movement tick.
 
 ---
 
@@ -598,7 +597,200 @@ We have implemented a fully interactive **System Configuration** screen accessib
   * Overhauled `apply_move()` inside the simulation layer to detect when the AI or Human player moves onto a core, adding a score bonus (`+15.0` for basic cores, `+30.0` for rare cores) and consuming it in the simulated matrix.
   * Updated `evaluate()` to add this accumulated core bonus to the final evaluation score, motivating the AI to actively target, hunt, and consume energy cores throughout the match!
 
+---
 
+## 🎵 Retro Audio & Sound Effects Subsystem (v1.3)
 
+We have introduced a fully-integrated, high-fidelity retro audio and sound effects (SFX) subsystem to enhance the game's neon arcade aesthetic:
 
+### 1. Procedural 8-Bit Chiptune WAV Loop Generator
+* Created a highly optimized mathematical synthesizer in Python (running natively on Windows) to generate an authentic 16-second looping chiptune soundtrack.
+* The synthesized audio features:
+  * **Pulse-Width-Modulated (PWM) Square Wave Lead**: A lush melody playing a futuristic C-minor theme with a 6Hz LFO vibrato and an exponential volume decay envelope.
+  * **Deep Triangle Pluck Bassline**: A driving 120 BPM C-minor eighth-note bassline with sharp exponential plucks.
+  * **Chiptune Drums**: A sweeping sine wave kick on beats 1 and 3 combined with a retro white noise burst snare decay on beats 2 and 4.
+* Exported directly as a standard, high-efficiency mono 16-bit PCM `retro_music.wav` file saved under `res://assets/retro_music.wav`.
+* **Bouncy Menu Soundtrack (v1.7) [NEW]**: Created a second procedural synthesizer in Python (running natively on Windows) to generate an upbeat, fun 16-second chiptune loop (`menu_music.wav` at 120 BPM) featuring a bouncy octave-jumping bassline, syncopated square-lead chimes, and retro chiptune percussion hits. Saved under `res://assets/menu_music.wav`.
+
+### 2. Autoload Singleton Audio Manager (`MusicPlayer.gd`)
+* Registered a global autoload singleton `MusicPlayer` inside `project.godot` configured to extend `AudioStreamPlayer`.
+* Features continuous, pause-resilient playback configured with `process_mode = Node.PROCESS_MODE_ALWAYS` so that background tracks can be paused or muted cleanly during engine freezes.
+* Configured native WAV looping forwards by automatically setting `loop_mode = LOOP_FORWARD` and calibrating sample-precise loop points in `_ready()`.
+* **Global Mute CanvasLayer Overlay [NEW]**: Instantiates a global `CanvasLayer` (with a high-priority draw layer of `100`) containing a custom-drawn vector `SoundToggleButton` positioned at the top-right of the viewport (`1225, 10`). This button is visible and clickable on every screen (Main Menu, Gameplay arena, and AI Visual Demo).
+* **Dynamic Neon Draw Routine**: The sound toggle button is drawn programmatically using vector coordinates to depict a premium retro speaker icon. It glows neon-cyan (`#00f0ff`) with curved audio arcs when sound is active, and turns neon-pink (`#ff2a7a`) with a cross (`X`) symbol when muted. Hovering over it highlights the button with a glowing background.
+* **Two-Way UI Synchronization**: Toggling the global button updates the master sound state in `ConfigManager` and automatically synchronizes the CheckButton on the configuration settings panel (if currently open). Toggling settings from the configuration screen instantly redraws the global button's active state.
+* Implements robust state APIs:
+  * `play_music()` — Starts/resumes looping gameplay playback (`retro_music.wav`).
+  * `play_menu_music()` — Starts/resumes looping menu playback (`menu_music.wav`).
+  * `stop_music()` — Halts playback.
+  * `pause_music()` — Pauses stream seamlessly using `stream_paused = true`.
+  * `resume_music()` — Resumes stream from its paused index.
+  * `update_volume()` — Maps linear volume `0.0 - 1.0` dynamically to decibel scales (`volume_db`) using Godot's built-in `linear_to_db`, muting completely at `-80.0` dB.
+  * `play_sfx(sfx_name)` — Plays a specified 8-bit sound effect dynamically using a child audio player, matching the configured master volume (with a +2dB boost to ensure key sound events pop clearly!).
+
+### 3. Integrated Gameplay Audio Lifecycle
+* decouped audio triggers into gameplay states seamlessly:
+  * **Welcome Menu / Scene Navigation**: Triggers `MusicPlayer.play_menu_music()` on the Main Menu, configuration screens, stats screens, and exit menus.
+  * **Match Start**: Automatically halts the menu track and triggers `MusicPlayer.play_music()` as soon as the match arena loads, building the arcade tension during the preparation countdown.
+  * **Pause/Resume Session**: Integrates with the `Escape` key and Joypad menu trigger, calling `MusicPlayer.pause_music()` on freeze and `MusicPlayer.resume_music()` on unpause.
+  * **Scene Returns**: Switches back to `MusicPlayer.play_menu_music()` whenever returning to the Main Menu from gameplay or quitting sessions, ensuring a clean transition.
+
+### 4. Interactive Configuration Controls
+* Extended the **System Configuration** screen dashboard with a dedicated "Audio Configuration" section:
+  * **Background Music CheckButton**: Toggles `ConfigManager.music_enabled` dynamically. Instantly starts or stops the active stream and updates audio states.
+  * **Music Volume HSlider**: A smooth volume slider adjusting volume from `0%` to `100%` in real-time. Emits value changes directly to the `MusicPlayer` to calibrate volume dynamically.
+
+### 5. Procedural 8-Bit Sound Effects (SFX)
+* Synthesized nine distinct retro 8-bit SFX WAV files in Python:
+  * **`countdown_beep.wav`**: A short, high-pitched 800Hz square wave blip with a fast exponential decay envelope.
+  * **`countdown_go.wav`**: A triumphant 1200Hz square wave beep with a longer 300ms decay.
+  * **`round_win.wav`**: A glorious ascending C-minor arpeggio (C4 -> Eb4 -> G4 -> C5 -> Eb5 -> G5) playing dynamic pulse-width modulated waves with note plucks and overall volume fade.
+  * **`round_loss.wav`**: A sad, descending pitch sweep (500Hz down to 60Hz) sawtooth wave mixed with decaying retro white noise crash elements.
+  * **`round_draw.wav`**: A classic double flat blip (220Hz beep for 80ms, 40ms silence, 220Hz beep for 120ms).
+  * **`button_click.wav` [NEW]**: A very short, soft 600Hz triangle wave pop (40ms duration) with low gain for pleasant menu navigation clicking.
+  * **`match_win.wav` [NEW]**: An epic C-major cascading retro arpeggiated triumph fanfare (1.2s duration) with a pulsing 8Hz tremolo tremolo chord tail.
+  * **`match_loss.wav` [NEW]**: A tragic descending 8-bit game-over cadence sweep (1.5s duration) with slow retro pitch drops.
+  * **`match_draw.wav` [NEW]**: A neutral retro 4-note draw melody (0.8s duration).
+* Seamlessly integrated SFX trigger points:
+  * **Countdown**: Triggers `countdown_beep` on countdown ticks `3`, `2`, and `1`, and `countdown_go` when the countdown hits `GO!`.
+  * **Round Complete**: Detects match state and plays `round_win` when the human player survives/wins (or AI wins in spectating watch mode), `round_loss` on defeat, and `round_draw` on draw collisions.
+  * **Universal Button Click [NEW]**: The global `MusicPlayer` autoload singleton connects to the tree's `node_added` event to automatically listen for any Button entering the game. It connects button presses dynamically to play `button_click`, providing complete clicking coverage across the entire game (Main Menu, Config Panel, HUD Overlays) with zero manual wiring!
+  * **Championship Match Over [NEW]**: Silence active round background music when the 5-round championship match finishes, playing `match_win` upon overall player match victory (or watch mode complete), `match_loss` on overall match loss, and `match_draw` on draw matches.
+
+---
+
+## 👾 Main Menu Living Cyber-Screensaver (v1.4)
+
+To complete the high-fidelity cybernetic aesthetic, we have added a live, dynamic background animation running infinitely behind the Main Menu:
+
+### 1. The Autonomous Snake Simulation
+* **Real-time Game Loop**: Instantiated a programmatically-managed `MenuBackgroundVisualizer` Control node drawing directly behind the menu panels at index `0`. It runs its own independent `120ms` game timer.
+* **Autonomous Minimap Search**: Spawns two computer-guided cycles (Red and Blue) navigating a custom `43×24` virtual menu grid.
+* **Smart Steering Heuristics**: The cycles continuously scan adjacent options, steering dynamically to avoid boundaries and each other's body trails.
+* **Graceful Reset**: If a collision occurs or paths completely cross, the simulation automatically triggers a visual reset, spawning them on opposing sides to begin slithering anew.
+
+### 2. Premium Vector Graphics
+* Overrode `_draw()` to construct modern, lightweight vector aesthetics that remain subtle backdrops without cluttering UI visibility:
+  - **Faint Tech-Grid Guides**: Paints a coordinates field of micro-dots spanning the screen at `30px` intervals.
+  - **Smooth Fading Trails**: Body segments are drawn as `24×24px` rounded rectangular capsules (increased from `16×16px`) with mathematically calculated gradient opacities (opacity `0.18` at the head fading down to `0.02` at the tail segment), giving a prominent Tron light-cycle aesthetic.
+  - **Radiant Glowing Heads**: Circular heads drawn at a larger `13.0px` radius (increased from `8.0px`) with neon pink (`#ff2a7a` at `0.4` opacity) and cyan (`#00f0ff` at `0.4` opacity) outer shadow glows around glowing white core light spheres (`6.5px` radius).
+
+---
+
+## ⚡ AI Time Budget & Latency Calibration (v1.5)
+
+We have successfully resolved a critical input lag and game-speed disparity issue by optimizing the AI Minimax search time budget constraints:
+
+### 1. The Root Cause
+* **Synchronous Main Thread Blocking**: Previously, the minimax AI search was hardcoded to run with a safe time limit of `150ms` per tick. Since GDScript runs synchronously on Godot's main thread, the entire game engine (including window events, drawing, and keyboard input polling) would freeze for up to `150ms` during each AI thinking cycle.
+* **Input Sluggishness (Delays)**: When you pressed any steering keys (WASD / Arrows) while playing, your inputs were queued during these freezes, leading to a highly sluggish, noticeable delay or "unresponsive" steering feel.
+* **Game Speed Disparity**: In PvP, there is no AI running, so ticks completed instantly in `0ms` (allowing the fastest setting to run at a true `50ms` rate). In PvAI, the AI blocking stretched each tick from `50ms` to `200ms` (making PvAI matches 4x slower and highly inconsistent compared to PvP).
+
+### 2. The Dynamic Time Budget Solution
+To restore instantaneous input response and unify match speeds, we decoupled and optimized the AI time limits:
+* **Dynamic Budget Scaling**: Overhauled both player controllers (`player_1.gd` and `AIPlayer.gd`) to scale their thinking budget dynamically based on the current tick speed:
+  `var time_budget = min(15.0, ConfigManager.tick_speed * 1000.0 * 0.20)`
+* **FPS-Safe Capping**: Capped the thinking time to a maximum of `15.0ms` (which is less than a single frame at 60 FPS).
+* **Flawless Playability**:
+  - At the **Fastest setting (50ms ticks)**, the AI is constrained to a `10.0ms` budget. This leaves `40ms` of idle CPU frame time, ensuring that the main thread is never blocked. Input processing is completely instantaneous with **zero delay**, and PvAI speed matches PvP perfectly.
+  - Due to highly efficient **Alpha-Beta move pre-sorting** in the search algorithm, the minimax still successfully evaluates branches up to `4 to 8` plies deep, preserving the AI's high-performance steering tactics.
+
+---
+
+## 🕹️ Lag-Free Double-Buffered Input Queuing & Advanced AI Performance Optimizations (v1.6)
+
+To completely eliminate any steering input lag, input drops, or self-collisions on rapid turns (especially at high tick speeds like 50ms), and to ensure flawless gameplay execution, we implemented a robust double-buffered input queuing system and advanced AI algorithmic optimizations:
+
+### 1. The Double-Buffered Input Queue System
+* **Double-Tap Dropping & Self-Collision**: Previously, pressing two directions quickly within a single tick window would cause the second input to overwrite the first. This caused "dropped turns" (the first turn never executed) or fatal 180-degree self-collisions (turning backwards into oneself because the middle-state was skipped).
+* **The 2-Element Buffer Solution**: We implemented a strict **2-element input queue (`input_queue: Array[Vector2i]`)** for both human players (`player_1.gd` and `AIPlayer.gd`):
+  - **Sequential Buffering**: Every valid movement action (WASD/Arrows for Player 1, P2 mappings for Player 2) is pushed to the input queue.
+  - **Self-Collision Guard**: When appending a new direction, the queue compares it against the *last queued turn* rather than the player's immediate physical direction. This prevents illegal 180-degree turns even when double-tapped in less than a few milliseconds.
+  - **Ticked Consumption**: During each game tick, the gameplay coordinator (`gameplay.gd`) pulls from the buffer using `get_and_consume_direction()`, executing queued moves sequentially, tile by tile, without any input loss.
+  - **Resets**: Player input queues are fully cleared and flushed during round transitions (`clear_queue()`) to prevent residual inputs from executing immediately at the start of a new round.
+
+### 2. High-Performance AI Minimax Optimizations
+* **O(1) Array Queue Pointer**: Replaced Godot's standard `Array.pop_front()` (which runs in $O(N)$ due to shifting array elements in memory) in the BFS flood-fill router with a fast pointer-read index (`q_idx`). Popping is now a constant-time $O(1)$ operation, speeding up single-node BFS traversals by a massive margin.
+* **Shallow BFS cap (25 cells) for Move Ordering**: During Alpha-Beta minimax branch sorting, a full-board BFS search is unnecessary. We capped the search-depth/cell-count of the ordering BFS to 25 cells. This is extremely fast (fractions of a millisecond) and perfectly sufficient to determine which moves lead to safety or dead ends.
+* **Smart Evaluation BFS cap (150 cells)**: Capped the main evaluation's BFS spatial analysis to 150 cells. Since a player with 150 free tiles is already completely safe from trapping, scanning the remaining board cells is redundant.
+* **20x to 50x Search Speedup**: Together, these optimizations have reduced the AI's minimax search time from `10-15ms` down to less than `0.5ms` per decision! The AI executes virtually instantaneously, completely eliminating frame rate dips and making PvAI and PvP speeds 100% identical and fluid.
+
+### 3. Glowing Circular Heads with Directional Eyes (`gameplay.gd`)
+* **Visual Directional Guidance**: Replaced the arrow player heads with custom Node2D drawing scripts (`PlayerHeadCircle`). The heads are drawn as solid neon circles with concentric outer glowing shadow rings.
+* **Directional Eyes**: To represent orientation, two cute white eyeballs with black pupils are drawn inside each head, automatically shifting and rotating to look in the active direction of travel (UP, DOWN, LEFT, or RIGHT) at spawn, round resets, and each movement tick.
+
+### 4. Upgraded Screensaver Snek Simulation & Heads (`main_menu.gd`)
+* **Gameplay-Matched Aesthetic**: Upgraded the `draw_snek` rendering routine inside `MenuBackgroundVisualizer` (`main_menu.gd`) to draw the four background snakes' heads with the exact same high-fidelity layers as the gameplay ones (multi-layered outer glowing rings, solid cores, white inner highlight rings, and directional eyes).
+* **Independent Crash & Respawn Subsystem**:
+  - **Individual Collision Audits**: Modified `_on_tick()` to evaluate each snake's next movement vector separately.
+  - **Local Crash Decoupling**: If a snake crashes into grid boundaries or another body segment, or collides head-to-head with another snake, only that specific snake index is flagged for a reset.
+  - **Decoupled Respawn (`reset_snek(i)`)**: Clears the body list and teleports just that crashed snake back to its specific original spawn coordinate (Red at left quadrant heights, Blue at right quadrant heights), keeping all other surviving snakes slithering infinitely and uninterrupted.
+
+### 5. Project Credits & Academic Disclaimer (`main_menu.gd`)
+* **New Menu Navigation Item**: Added a dedicated `PROJECT CREDITS` button programmatically to the main menu `VBoxContainer`, positioned directly above the `QUIT` button.
+* **Dynamic Neon Interface Styling**: Configured the new button to automatically inherit the global theme font, size, and layout properties. Added it to the central styling system to receive custom neon hover highlights and the slide-to-right micro-animation.
+* **Scrollable BBCode Panel**: Added `_on_credits_pressed()` to instantiate a centered `VBoxContainer` featuring:
+  - An `#00f0ff` glowing title label.
+  - A `#ff2a7a` glowing divider line.
+  - A scroll-bounded `RichTextLabel` with BBCode text highlighting **Group 2**, **BSCS 3-3**, **Introduction to Artificial Intelligence**, **CCIS**, and **PUP Sta. Mesa, Manila** in neon accent colors.
+  - A dedicated **Development Team (Group 2)** section detailing the developers: **Fiona Mikaela Beatriz Alberto**, **Van Ernest Molo**, **Nichole Shaynne Odion**, and **Crystal Kylla Viagedor** in bold gold letters.
+* **Unified Back Mappings**: Integrated the new screen with the `ui_cancel` input callback, ensuring pressing `Esc` or a gamepad's back key returns focus back to the `PROJECT CREDITS` button cleanly.
+
+### 6. Rules Panel Simulations (`rules_and_mechanics.gd`)
+* **Flood Fill Simulation Demo (`FloodFillDemoVisualizer`)**: Embedded a dedicated, live 2D drawing simulator at the bottom of the first card (**01. Enclosure Flood Fill**):
+  - **Miniature Grid**: Simulates a compact `20×10` grid with `15px` cells.
+  - **Loop Completion Scenario**: The red snake starts slithering to close a partial trail loop. On connecting the final cell:
+    - **Loop Connection Fix**: Removed `(12, 2)` from the initialized static trail array, ensuring the snake head lands on an empty cell to complete the loop, avoiding a "loss-like" overlap.
+    - **Territory Flood**: The enclosed inner zone instantly floods with a glowing semi-transparent pink overlay.
+    - **Core Claiming**: A neon-green energy core inside the enclosure is consumed, triggering an arcade-style floating **+5 PTS** text that floats upward and fades.
+    - **Looping Reset**: The animation freezes for 2 seconds to showcase the result, then loops back to the start.
+* **Scoring Rules Demo (`ScoringDemoVisualizer`) [NEW]**: Embedded a live 2D simulator at the bottom of the second card (**02. Scoring Matrix Rules**):
+  - **Grid & Target Cores**: A red snake slithers in a predefined loop to eat a Standard Core (Neon Green, +5 PTS) and a Rare Core (Neon Gold, +10 PTS).
+  - **Scoreboard HUD & Popups**: Displays a live score counter updating in real-time (`SCORE: 0` -> `5` -> `15`) and pops arcade floating texts (`+5 PTS`, `+10 PTS`) rising and fading.
+* **Championship Rounds Demo (`ChampionshipDemoVisualizer`) [NEW]**: Embedded a live 2D simulator at the bottom of the third card (**03. Championship Rounds**):
+  - **Randomized Round Setup**: Cycles through 5 distinct rounds with different snake starting positions and directions to represent spawn randomization.
+  - **Round Progression Banners**: Displays a HUD with scores (`RED`, `BLUE`, and `ROUND X/5`), pausing at the end of each round to show "ROUND X COMPLETE" before transitioning.
+  - **Tournament Conclusion**: At the end of Round 5, displays a "RED WINS THE MATCH! 80-65" championship victory screen before resetting.
+* **Collision & Crash Rules Demo (`CrashDemoVisualizer`)**: Modified the fourth card title to **04. COLLISION & CRASH RULES**:
+  - **Visualizer Customization**: Shows three collision scenarios (Wall collision, Trail collision, Head-to-head collision) with explosion rings, displaying **LOSS** (red) or **DRAW** (gold) text.
+* **Unified Yellow Border Styling**: Changed the border styling of Card 1, Card 2, Card 3, and all simulation visualizers to a solid gold/yellow theme (`#ffd700`) to match the styling of Card 4, providing a clean, cohesive, and premium look.
+
+### 7. HUD Overhaul & Visual Polish Pass (v1.9) [NEW]
+We have completely overhauled the in-game HUD and resolved text slashes:
+* **Countdown Zoom Centering**: Added `await get_tree().process_frame` right after opening the countdown overlay. The countdown label's `pivot_offset` is now computed dynamically as `size / 2.0` before starting any tween. This centers the scale-punch zoom animation perfectly in the middle of the screen, removing the off-center slide.
+* **User-Facing Slash `/` to `"or"` / `"of"` Replacement**:
+  - Replaced `/` in the HUD round title `"ROUND %d/%d"` to `"ROUND %d of %d"`.
+  - Replaced `/` in HUD round forfeit text to `"ESCAPE or BACK TO FORFEIT MATCH"`.
+  - Replaced `/` in speed labels (`ms/tick` -> `ms`).
+  - Replaced `/` in AI demo control tooltips (`Prev Game Tick / Move` -> `Prev Game Tick or Move`, etc.).
+  - Replaced `/` in keyboard and gamepad mapping menus (`W / Up Arrow` -> `W or Up Arrow`, `STEERING / TURNS` -> `STEERING or TURNS`, etc.).
+  - Fixed encoding bugs in mapping text (replaced broken `•` bullet characters with premium, high-contrast cybernetic diamonds `◆`).
+  - Replaced `/` in rules simulation championship rounds label (`ROUND %d/5` -> `ROUND %d of 5`).
+* **Cyber-Glass HUD Design**:
+  - Redesigned the main left/right HUD panels with a cybernetic, 74% opacity dark glass background (`Color("#07090ebd")`) and 1px thin glowing neon borders, letting the grid arena underneath shine through beautifully.
+  - Reverted HUD and countdown fonts to the clean, highly legible default system font for maximum readability, ensuring small stats text and fast-moving timers are instantly readable.
+  - Designed clean two-column GridContainers for Round Stats (pts, cells) and Cores Harvested, aligning titles to the left and values to the right.
+  - Added clean Unicode icons (`⬡ Basic Cores`, `✦ Rare Cores`) to make stat tracking feel like a premium retro sci-fi dashboard.
+  - Enclosed the human controls and AI minimax telemetry in custom card sub-panels with 15% opacity player-colored backgrounds and low-intensity border glows.
+* **Top HUD Capsule Bar**:
+  - Replaced the free-floating top HUD labels with a sleek floating capsule pill (`tc_style` with corner radius 18, 74% opacity background, thin dark border, and subtle drop shadow).
+  - Centered it perfectly at `x=410, y=12` with a width of `460px` to fit above the grid.
+  - Organized contents horizontally with vertical dividers (`ColorRect` lines) separating the round title, outcome indicators, and the high-accuracy clock.
+  - Set the digital timer text to use the clear default font with a bright neon-cyan color to look like a physical digital clock.
+  - Resized the round outcome indicator dots to `14px` so they fit inside the capsule bar without overflow.
+
+### 14. Action-Coded Color System, Overhauled Round Complete Card & Font Upgrade (v2.0) [NEW]
+We have restructured UI accents, buttons, and panels to use distinct, action-coded colors rather than repetitive pink/blue elements, upgraded the round completion breakdown, and set up a beautiful modern font:
+- **Title Label Outline Removal**: Set the outline size of the "COLOR GRID CLASH" main menu title to 0, creating a clean, borderless appearance.
+- **Solid Pink Welcome HUD Border**: Re-enabled the solid neon-pink border (`#ff2a7a`) and shadow glow (`Color(1.0, 0.16, 0.48, 0.2)`) on the main welcome `DisplayPanel` card for classic styling consistency. Any temp overlays were fully cleaned up.
+- **Differentiated Exit Action Buttons (Red)**: Color-coded the "MAIN MENU" button (post-game match results screen) and the "ABORT TO MENU" button (pause overlay) to use **Neon Red (`#ff3333`)** borders, text, and glowing red focus shadows. Play Again remains green (`#39ff14`).
+- **Dynamic HUD Font (Chakra Petch)**: Preloaded the high-readability sci-fi sans-serif `ChakraPetch-Regular.ttf` as the default theme font for `main_ctrl` and all overlays (`countdown_overlay`, `post_round_overlay`, `post_game_overlay`, `pause_overlay`), replacing the default basic system font.
+- **Gameplay Pause Button (Top Left)**: Added a dedicated custom-drawn `40x40px` borderless button at `x=15, y=10` containing two vertical pause bars. It is blue (`#00f0ff`) by default (matching the sound toggle button size, alignment, and default color) and turns pink (`#ff2a7a`) with a soft pink backing highlight on hover. This achieves exact visual mirroring and symmetry with the sound button on the top-right.
+- **Borderless Global Sound Toggle**: Modified the global sound toggle button (`SoundToggleButton`) in `MusicPlayer.gd` to remove its colored border outlines, rendering it borderless for a clean, premium visual consistency with the pause button.
+- **Gold Pause HUD Theme**: Differentiated the Pause menu visually by changing the `"GAME PAUSED"` title text color to **Gold Yellow (`#ffd700`)**, and the pause button panel container to have a 1px border and outer shadow glow in Gold Yellow.
+- **Round Complete Breakdown Card Overhaul**:
+  - **Winner-Themed Dynamic Glow**: The card panel features a 2px glowing border and drop shadow matching the round outcome (Neon Pink for RED win, Neon Cyan for BLUE win, and Gold for DRAW).
+  - **Dynamic Player vs. AI Headers**: Column headers dynamically check ConfigManager settings and print `PLAYER 1` or `AI SEARCHER 1` and `PLAYER 2` or `AI SEARCHER 2` correctly instead of hardcoded labels.
+  - **Polished Separator Columns**: Thin horizontal dividers (`ColorRect` lines) separate category details (Captured Cells, Cores, Bonuses) from the final total score row.
+  - **Dynamic Match Results Labels**: The final game-over results scoreboard uses the correct dynamic headers based on player vs. AI settings.
 

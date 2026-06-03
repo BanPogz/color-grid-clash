@@ -109,7 +109,11 @@ func generate_random_walls(density: float) -> void:
 			
 		# 4. COMMIT THE WALL
 		grid_matrix[rand_x][rand_y] = CellType.WALL
-		grid_layer.set_cell(candidate_pos, 4, Vector2i(0, 0)) 
+		grid_layer.set_cell(candidate_pos, 4, Vector2i(0, 0))
+		# Mirror to wall glow layer for violet-purple neon effect
+		var wgl = get_meta("wall_glow_layer", null)
+		if wgl != null:
+			wgl.set_cell(candidate_pos, 4, Vector2i(0, 0))
 		walls_placed += 1
 
 # Helper to convert grid coordinates to screen pixel positions centered inside the tiles
@@ -143,6 +147,10 @@ func _ready() -> void:
 	grid_layer.set_cell(red_spawn_pos, 2, Vector2i(0, 0))
 	grid_layer.set_cell(blue_spawn_pos, 3, Vector2i(0, 0))
 	
+	# Rotate arrow heads to match initial direction
+	update_head_rotation(player_red, player_red.current_direction)
+	update_head_rotation(ai_player, ai_player.current_direction)
+	
 	generate_random_walls(ConfigManager.get_wall_density()) # configured static walls
 	
 	# Spawn energy cores
@@ -171,6 +179,7 @@ func _ready() -> void:
 	
 	# Configure the Timer programmatically
 	tick_timer = Timer.new()
+	tick_timer.process_callback = Timer.TIMER_PROCESS_PHYSICS # Decouple from monitor refresh rate & VSync
 	tick_timer.wait_time = ConfigManager.tick_speed # Configured tick speed
 	add_child(tick_timer)
 	tick_timer.timeout.connect(_on_tick_timer_timeout)
@@ -188,6 +197,12 @@ func _ready() -> void:
 	else:
 		tick_timer.start()
 		round_clock_timer.start()
+		
+	# Play retro background music
+	var mp = get_node_or_null("/root/MusicPlayer")
+	if mp != null:
+		mp.play_music()
+
 
 func _on_round_clock_timer_timeout() -> void:
 	if current_round_active:
@@ -226,6 +241,8 @@ func _on_tick_timer_timeout() -> void:
 		var start_think_time = Time.get_ticks_msec()
 		red_dir = player_red.think_and_decide(current_state_data)
 		think_time_ms_red = float(Time.get_ticks_msec() - start_think_time)
+	else:
+		red_dir = player_red.get_and_consume_direction()
 	
 	var blue_dir = ai_player.current_direction
 	var think_time_ms_blue = 0.0
@@ -233,6 +250,8 @@ func _on_tick_timer_timeout() -> void:
 		var start_think_time = Time.get_ticks_msec()
 		blue_dir = ai_player.think_and_decide(current_state_data)
 		think_time_ms_blue = float(Time.get_ticks_msec() - start_think_time)
+	else:
+		blue_dir = ai_player.get_and_consume_direction()
 	
 	# Update Minimax telemetry stats on HUD
 	if hud != null:
@@ -273,10 +292,12 @@ func _on_tick_timer_timeout() -> void:
 			winner_text = "Round %d DRAW - Both players crashed!" % current_round
 		elif red_crashed:
 			round_outcome = "BLUE"
-			winner_text = "Round %d BLUE AI wins the round!" % current_round
+			var blue_name = "AI 2" if ConfigManager.blue_is_ai else "Player 2"
+			winner_text = "Round %d %s wins the round!" % [current_round, blue_name]
 		else:
 			round_outcome = "RED"
-			winner_text = "Round %d RED Player wins the round!" % current_round
+			var red_name = "AI 1" if ConfigManager.red_is_ai else "Player 1"
+			winner_text = "Round %d %s wins the round!" % [current_round, red_name]
 			
 		handle_round_over(round_outcome, winner_text)
 		return
@@ -285,12 +306,14 @@ func _on_tick_timer_timeout() -> void:
 	update_logical_matrix(player_red, next_red, "RED")
 	update_logical_matrix(ai_player, next_blue, "BLUE")
 	
-	# 5. Move actual game nodes visually
+	# 5. Move actual game nodes visually with smooth tween interpolation
 	player_red.grid_position = next_red
-	player_red.position = tile_to_pixel(next_red)
+	update_head_rotation(player_red, red_dir)  # Snap rotation immediately
+	smooth_move_player(player_red, next_red)
 	
 	ai_player.grid_position = next_blue
-	ai_player.position = tile_to_pixel(next_blue)
+	update_head_rotation(ai_player, blue_dir)  # Snap rotation immediately
+	smooth_move_player(ai_player, next_blue)
 	
 	# Run enclosure flood algorithm
 	if ConfigManager.flood_fill_enabled:
@@ -298,6 +321,18 @@ func _on_tick_timer_timeout() -> void:
 	
 	# Update HUD scores & percentages continually
 	update_hud()
+
+func smooth_move_player(player: BasePlayer, new_grid_pos: Vector2i) -> void:
+	# Tween the visual position smoothly to the new tile — purely cosmetic,
+	# game logic (grid_position) is already updated before this is called.
+	var target_px = tile_to_pixel(new_grid_pos)
+	var tween_dur = ConfigManager.tick_speed * 0.88
+	
+	var tw = player.create_tween()
+	tw.set_ease(Tween.EASE_OUT)
+	tw.set_trans(Tween.TRANS_QUART)
+	tw.tween_property(player, "position", target_px, tween_dur)
+
 
 func check_collision(pos: Vector2i) -> bool:
 	if pos.x < 0 or pos.x >= grid_width or pos.y < 0 or pos.y >= grid_height:
@@ -448,7 +483,42 @@ func handle_round_over(outcome: String, round_message: String) -> void:
 	var p2_won = outcome == "BLUE"
 	var is_draw = outcome == "DRAW"
 	
+	# Play win/loss/draw sound effects
+	var mp = get_node_or_null("/root/MusicPlayer")
+	if mp != null:
+		if is_draw:
+			mp.play_sfx("round_draw")
+		else:
+			# Determine if the human player won or lost
+			var human_won = false
+			var human_lost = false
+			
+			if not ConfigManager.red_is_ai and ConfigManager.blue_is_ai:
+				# Solo vs AI (Red is human)
+				if outcome == "RED":
+					human_won = true
+				else:
+					human_lost = true
+			elif ConfigManager.red_is_ai and not ConfigManager.blue_is_ai:
+				# Red is AI, Blue is human
+				if outcome == "BLUE":
+					human_won = true
+				else:
+					human_lost = true
+			elif not ConfigManager.red_is_ai and not ConfigManager.blue_is_ai:
+				# PvP (Both are human - someone definitely wins)
+				human_won = true
+			else:
+				# AI vs AI Watch Mode
+				human_won = true # default to win SFX for watch satisfaction!
+				
+			if human_won:
+				mp.play_sfx("round_win")
+			elif human_lost:
+				mp.play_sfx("round_loss")
+				
 	round_history.append(outcome)
+
 	
 	# Finalize round scores including round win bonus
 	var r1_base = p1_captured_cells + p1_basic_cores * 5 + p1_rare_cores * 10
@@ -488,12 +558,14 @@ func handle_round_over(outcome: String, round_message: String) -> void:
 				else:
 					var grand_winner = ""
 					var grand_message = ""
+					var p1_name = "AI 1" if ConfigManager.red_is_ai else "PLAYER 1"
+					var p2_name = "AI 2" if ConfigManager.blue_is_ai else "PLAYER 2"
 					if p1_match_score > p2_match_score:
 						grand_winner = "RED"
-						grand_message = "PLAYER 1 WINS THE MATCH!"
+						grand_message = "%s WINS THE MATCH!" % p1_name
 					elif p2_match_score > p1_match_score:
 						grand_winner = "BLUE"
-						grand_message = "BLUE AI WINS THE MATCH!"
+						grand_message = "%s WINS THE MATCH!" % p2_name
 					else:
 						grand_winner = "DRAW"
 						grand_message = "IT'S A GRAND DRAW!"
@@ -507,7 +579,34 @@ func handle_round_over(outcome: String, round_message: String) -> void:
 						match_total_cells
 					)
 					
+					# Stop normal background music when playing match ending fanfares!
+					var mp_local = get_node_or_null("/root/MusicPlayer")
+					if mp_local != null:
+						mp_local.stop_music()
+						if grand_winner == "DRAW":
+							mp_local.play_sfx("match_draw")
+						else:
+							var human_grand_won = false
+							var human_grand_lost = false
+							
+							if not ConfigManager.red_is_ai and ConfigManager.blue_is_ai:
+								if grand_winner == "RED": human_grand_won = true
+								else: human_grand_lost = true
+							elif ConfigManager.red_is_ai and not ConfigManager.blue_is_ai:
+								if grand_winner == "BLUE": human_grand_won = true
+								else: human_grand_lost = true
+							elif not ConfigManager.red_is_ai and not ConfigManager.blue_is_ai:
+								human_grand_won = true
+							else:
+								human_grand_won = true # watch mode default
+								
+							if human_grand_won:
+								mp_local.play_sfx("match_win")
+							elif human_grand_lost:
+								mp_local.play_sfx("match_loss")
+								
 					hud.show_match_results(grand_winner, grand_message, p1_match_score, p2_match_score)
+
 		)
 	else:
 		# Fallback if HUD is null
@@ -534,11 +633,14 @@ func start_next_round() -> void:
 	initialize_matrix()
 	
 	# Reset visual layers: paint background grid and clear active trails/walls on grid_layer
+	var wgl_reset = get_meta("wall_glow_layer", null)
 	for x in range(grid_width):
 		for y in range(grid_height):
 			if background_layer != null:
 				background_layer.set_cell(Vector2i(x, y), 1, Vector2i(0, 0))
 			grid_layer.set_cell(Vector2i(x, y), -1)
+			if wgl_reset != null:
+				wgl_reset.set_cell(Vector2i(x, y), -1)
 			
 	# 2. Reset round counters
 	p1_basic_cores = 0
@@ -558,6 +660,11 @@ func start_next_round() -> void:
 	player_red.body_segments.clear()
 	ai_player.body_segments.clear()
 	
+	if player_red.has_method("clear_queue"):
+		player_red.clear_queue()
+	if ai_player.has_method("clear_queue"):
+		ai_player.clear_queue()
+	
 	# 3. Re-randomize spawns
 	red_spawn_pos = Vector2i(randi_range(2, 7), randi_range(2, 17))
 	blue_spawn_pos = Vector2i(randi_range(12, 17), randi_range(2, 17))
@@ -573,6 +680,10 @@ func start_next_round() -> void:
 	# Re-paint spawn trail tiles
 	grid_layer.set_cell(red_spawn_pos, 2, Vector2i(0, 0))
 	grid_layer.set_cell(blue_spawn_pos, 3, Vector2i(0, 0))
+	
+	# Update arrow head rotations for new round spawn
+	update_head_rotation(player_red, player_red.current_direction)
+	update_head_rotation(ai_player, ai_player.current_direction)
 	
 	# Regenerate static walls
 	generate_random_walls(ConfigManager.get_wall_density())
@@ -720,6 +831,11 @@ func restart_match() -> void:
 	start_next_round()
 
 func go_to_main_menu() -> void:
+	# Transition back to menu background music
+	var mp = get_node_or_null("/root/MusicPlayer")
+	if mp != null:
+		mp.play_menu_music()
+		
 	get_tree().paused = false
 	get_tree().change_scene_to_file("res://scenes/menu/main_menu.tscn")
 
@@ -746,96 +862,197 @@ func toggle_pause() -> void:
 			hud.show_pause_menu()
 		else:
 			hud.hide_pause_menu()
+			
+	# Update music playback state on pause/unpause
+	var mp = get_node_or_null("/root/MusicPlayer")
+	if mp != null:
+		if is_paused:
+			mp.pause_music()
+		else:
+			mp.resume_music()
+
 
 func setup_cybernetic_grid_layout() -> void:
-	# 1. Redesign grid background ColorRect to deep space charcoal
+	# 1. Deep void background — true black so neon trails glow hard
 	var bg_rect = $ColorRect
 	if bg_rect != null:
-		bg_rect.color = Color("#07090d") # Deep cybernetic charcoal
+		bg_rect.color = Color("#030508") # True void — deepest possible base
 		
-	# Create a dedicated background_layer programmatically to show high-fidelity subtle grid lines
-	# without modulating active trails and walls on grid_layer
+	# 2. Background grid line layer — faint cyan-teal so empty cells read as a cool arena floor
 	background_layer = TileMapLayer.new()
 	background_layer.name = "BackgroundGridLayer"
 	background_layer.tile_set = grid_layer.tile_set
-	background_layer.self_modulate = Color(0.25, 0.3, 0.45, 0.75) # Subtle, highly visible grid lines
+	background_layer.self_modulate = Color(0.04, 0.18, 0.26, 0.65) # Cold cyan-teal grid lines
 	add_child(background_layer)
-	# Move background_layer to be behind grid_layer
 	move_child(background_layer, grid_layer.get_index())
-	
-	# Paint background grid lines immediately
 	for x in range(grid_width):
 		for y in range(grid_height):
 			background_layer.set_cell(Vector2i(x, y), 1, Vector2i(0, 0))
-			
-	# Keep grid_layer completely unmodulated so trails and walls are 100% bright and vibrant!
+	
+	# Keep grid_layer unmodulated so trails and walls are 100% vibrant
 	grid_layer.self_modulate = Color.WHITE
 	
-	# 3. Add a premium, glowing neon frame around the 600x600px gameplay area
-	var frame = Panel.new()
-	frame.name = "GameplayGridFrame"
-	frame.size = Vector2(600, 600)
-	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# 3. Dedicated wall layer — rendered with a sinister violet-purple glow
+	# Walls are painted here from generate_random_walls, so we override modulate.
+	# We tint the whole grid_layer for trails, but we paint a separate visual wall layer.
+	# Actually: walls are source_id=4 on grid_layer, trails are 2/3 — so we use a separate overlay layer.
+	var wall_layer = TileMapLayer.new()
+	wall_layer.name = "WallGlowLayer"
+	wall_layer.tile_set = grid_layer.tile_set
+	wall_layer.self_modulate = Color(0.78, 0.35, 1.0, 0.85) # Violet-purple neon danger glow
+	wall_layer.z_index = -1  # Behind trails but above background
+	add_child(wall_layer)
+	move_child(wall_layer, grid_layer.get_index())
+	# Store reference for generate_random_walls to mirror wall tiles onto
+	set_meta("wall_glow_layer", wall_layer)
 	
-	var frame_style = StyleBoxFlat.new()
-	frame_style.draw_center = false
-	frame_style.border_color = Color("#1c2030") # Sleek high-tech border
-	frame_style.set_border_width_all(2)
-	frame_style.corner_radius_top_left = 6
-	frame_style.corner_radius_top_right = 6
-	frame_style.corner_radius_bottom_left = 6
-	frame_style.corner_radius_bottom_right = 6
+	# 4. Premium split-color neon frame: pink on left+top, cyan on right+bottom
+	# Pink frame (top-left layers)
+	var frame_pink = Panel.new()
+	frame_pink.name = "FramePink"
+	frame_pink.size = Vector2(600, 600)
+	frame_pink.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var fs_pink = StyleBoxFlat.new()
+	fs_pink.draw_center = false
+	fs_pink.border_color = Color("#ff2a7a")
+	fs_pink.border_width_left = 2
+	fs_pink.border_width_top = 2
+	fs_pink.border_width_right = 0
+	fs_pink.border_width_bottom = 0
+	fs_pink.shadow_color = Color(1.0, 0.16, 0.48, 0.4)
+	fs_pink.shadow_size = 12
+	fs_pink.shadow_offset = Vector2(-2, -2)
+	frame_pink.add_theme_stylebox_override("panel", fs_pink)
+	add_child(frame_pink)
+	# Cyan frame (bottom-right layers)
+	var frame_cyan = Panel.new()
+	frame_cyan.name = "FrameCyan"
+	frame_cyan.size = Vector2(600, 600)
+	frame_cyan.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var fs_cyan = StyleBoxFlat.new()
+	fs_cyan.draw_center = false
+	fs_cyan.border_color = Color("#00f0ff")
+	fs_cyan.border_width_left = 0
+	fs_cyan.border_width_top = 0
+	fs_cyan.border_width_right = 2
+	fs_cyan.border_width_bottom = 2
+	fs_cyan.shadow_color = Color(0.0, 0.94, 1.0, 0.4)
+	fs_cyan.shadow_size = 12
+	fs_cyan.shadow_offset = Vector2(2, 2)
+	frame_cyan.add_theme_stylebox_override("panel", fs_cyan)
+	add_child(frame_cyan)
 	
-	# Add an outer glow using shadow
-	frame_style.shadow_color = Color(1.0, 1.0, 1.0, 0.15) # Neutral white glow
-	frame_style.shadow_size = 15
-	frame.add_theme_stylebox_override("panel", frame_style)
-	add_child(frame)
+	# 5. Corner bracket decorations (sci-fi targeting reticle look)
+	var corners = [
+		{"pos": Vector2(0, 0), "rot": 0.0},
+		{"pos": Vector2(600, 0), "rot": PI / 2.0},
+		{"pos": Vector2(600, 600), "rot": PI},
+		{"pos": Vector2(0, 600), "rot": -PI / 2.0}
+	]
+	for c in corners:
+		var bracket = CornerBracket.new()
+		bracket.position = c["pos"]
+		bracket.rotation = c["rot"]
+		add_child(bracket)
 	
-	# 4. setup player heads
+	# 6. Setup player heads
 	setup_neon_player_heads()
+
+# Sci-fi corner bracket decoration drawn at each corner of the arena
+class CornerBracket extends Node2D:
+	func _draw() -> void:
+		var c1 = Color("#ff2a7a")  # Pink side
+		var c2 = Color("#00f0ff")  # Cyan side
+		var len_px = 18.0
+		var thick = 2.5
+		# Horizontal arm
+		draw_line(Vector2(0, 0), Vector2(len_px, 0), c1, thick)
+		# Vertical arm
+		draw_line(Vector2(0, 0), Vector2(0, len_px), c2, thick)
+		# Small corner dot
+		draw_circle(Vector2.ZERO, 2.5, Color.WHITE * 0.9)
+
+# Custom 2D Node to draw a glowing neon circular head with directional eyes
+class PlayerHeadCircle extends Node2D:
+	var head_color: Color
+	var glow_color: Color
+	
+	func _init(p_head_color: Color, p_glow_color: Color):
+		head_color = p_head_color
+		glow_color = p_glow_color
+		
+	func _draw() -> void:
+		# 1. Draw glowing outer shadow rings
+		for i in range(3):
+			var radius = 10.0 + (3 - i) * 3.0
+			var alpha = 0.15 + i * 0.12
+			draw_circle(Vector2.ZERO, radius, Color(glow_color.r, glow_color.g, glow_color.b, alpha))
+			
+		# 2. Draw the solid neon head circle
+		draw_circle(Vector2.ZERO, 10.0, head_color)
+		
+		# 3. Draw a white inner core highlighting edge
+		draw_circle(Vector2.ZERO, 8.0, Color.WHITE * 0.25)
+		
+		# 4. Draw eyes looking in the direction of movement (always facing right at 0 rotation)
+		var eye_color = Color.WHITE
+		var pupil_color = Color.BLACK
+		
+		var eye_r = 2.8
+		var pupil_r = 1.3
+		
+		# Place eyes at top-right and bottom-right relative to facing direction
+		var eye1_pos = Vector2(3.5, -3.2)
+		var eye2_pos = Vector2(3.5, 3.2)
+		
+		# Eyeballs
+		draw_circle(eye1_pos, eye_r, eye_color)
+		draw_circle(eye2_pos, eye_r, eye_color)
+		
+		# Pupils shifted forward to look alive
+		var pupil_shift = Vector2(0.8, 0.0)
+		draw_circle(eye1_pos + pupil_shift, pupil_r, pupil_color)
+		draw_circle(eye2_pos + pupil_shift, pupil_r, pupil_color)
 
 func setup_neon_player_heads() -> void:
 	# Customize Player 1 (Red)
 	var red_sprite = player_red.get_node_or_null("Area2D/Sprite2D")
 	if red_sprite != null:
-		# Hide the old png sprite texture
 		red_sprite.visible = false
 		
-		# Create a gorgeous glowing neon-pink circle/square
-		var neon_head = Panel.new()
-		neon_head.name = "NeonHead"
-		neon_head.custom_minimum_size = Vector2(20, 20)
-		neon_head.size = Vector2(20, 20)
-		neon_head.position = Vector2(-10, -10) # Center on tile
-		
-		var style = StyleBoxFlat.new()
-		style.bg_color = Color("#ff2a7a") # Solid glowing neon pink
-		style.set_corner_radius_all(10) # Circular head!
-		style.shadow_color = Color(1.0, 0.16, 0.48, 0.8)
-		style.shadow_size = 8
-		neon_head.add_theme_stylebox_override("panel", style)
-		
+		# Remove old head node if it exists
+		var old = player_red.get_node_or_null("NeonHeadArrow")
+		if old != null:
+			old.queue_free()
+			
+		var neon_head = PlayerHeadCircle.new(Color("#ff2a7a"), Color(1.0, 0.16, 0.48))
+		neon_head.name = "NeonHeadArrow"
 		player_red.add_child(neon_head)
+		# Breathing scale pulse — makes the head feel alive
+		var pulse_red = neon_head.create_tween().set_loops()
+		pulse_red.tween_property(neon_head, "scale", Vector2(1.08, 1.08), 0.55).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		pulse_red.tween_property(neon_head, "scale", Vector2(0.93, 0.93), 0.55).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 	# Customize Player 2 (Blue AI)
 	var blue_sprite = ai_player.get_node_or_null("Area2D/Sprite2D")
 	if blue_sprite != null:
-		# Hide the old png sprite texture
 		blue_sprite.visible = false
 		
-		# Create a gorgeous glowing neon-cyan circle/square
-		var neon_head = Panel.new()
-		neon_head.name = "NeonHead"
-		neon_head.custom_minimum_size = Vector2(20, 20)
-		neon_head.size = Vector2(20, 20)
-		neon_head.position = Vector2(-10, -10) # Center on tile
-		
-		var style = StyleBoxFlat.new()
-		style.bg_color = Color("#00f0ff") # Solid glowing neon cyan
-		style.set_corner_radius_all(10) # Circular head!
-		style.shadow_color = Color(0.0, 0.94, 1.0, 0.8)
-		style.shadow_size = 8
-		neon_head.add_theme_stylebox_override("panel", style)
-		
+		# Remove old head node if it exists
+		var old = ai_player.get_node_or_null("NeonHeadArrow")
+		if old != null:
+			old.queue_free()
+			
+		var neon_head = PlayerHeadCircle.new(Color("#00f0ff"), Color(0.0, 0.94, 1.0))
+		neon_head.name = "NeonHeadArrow"
 		ai_player.add_child(neon_head)
+		# Breathing scale pulse — offset phase from red head
+		var pulse_blue = neon_head.create_tween().set_loops()
+		pulse_blue.tween_property(neon_head, "scale", Vector2(0.93, 0.93), 0.55).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		pulse_blue.tween_property(neon_head, "scale", Vector2(1.08, 1.08), 0.55).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+func update_head_rotation(player: BasePlayer, direction: Vector2i) -> void:
+	var head = player.get_node_or_null("NeonHeadArrow")
+	if head != null:
+		# Convert Vector2i direction into a rotation angle in radians
+		head.rotation = Vector2(direction).angle()

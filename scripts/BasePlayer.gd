@@ -16,3 +16,8 @@ func get_next_grid_position() -> Vector2i:
 # Helper function to update the logical position of the player
 func move_to(new_grid_pos: Vector2i) -> void:
 	grid_position = new_grid_pos
+
+# Helper to get the next movement direction, consuming buffered inputs if applicable
+func get_and_consume_direction() -> Vector2i:
+	return current_direction
+

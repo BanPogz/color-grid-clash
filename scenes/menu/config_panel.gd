@@ -34,13 +34,19 @@ func _ready() -> void:
 	title.text = "SYSTEM CONFIGURATION"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_color_override("font_color", Color("#00f0ff")) # Neon cyan
-	title.add_theme_font_size_override("font_size", 22)
+	title.add_theme_font_size_override("font_size", 20)
 	vbox.add_child(title)
+	
+	# Accent separator
+	var sep = ColorRect.new()
+	sep.custom_minimum_size = Vector2(0, 2)
+	sep.color = Color("#ff2a7a") # Neon pink line
+	vbox.add_child(sep)
 	
 	# GridContainer for parameters
 	var grid = GridContainer.new()
 	grid.columns = 2
-	grid.add_theme_constant_override("h_separation", 40)
+	grid.add_theme_constant_override("h_separation", 30)
 	grid.add_theme_constant_override("v_separation", 15)
 	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	vbox.add_child(grid)
@@ -85,8 +91,8 @@ func _ready() -> void:
 	var update_mode_status = func():
 		ConfigManager.red_is_ai = red_chk.button_pressed
 		ConfigManager.blue_is_ai = blue_chk.button_pressed
-		var p1_str = "AI Searcher 1" if ConfigManager.red_is_ai else "Player 1 (WASD)"
-		var p2_str = "AI Searcher 2" if ConfigManager.blue_is_ai else "Player 2 (Arrows)"
+		var p1_str = "AI 1" if ConfigManager.red_is_ai else "Player 1 (WASD)"
+		var p2_str = "AI 2" if ConfigManager.blue_is_ai else "Player 2 (Arrows)"
 		mode_status_lbl.text = "Active Protocol: %s vs. %s" % [p1_str.to_upper(), p2_str.to_upper()]
 	
 	red_chk.toggled.connect(func(pressed): update_mode_status.call())
@@ -106,17 +112,19 @@ func _ready() -> void:
 	)
 	
 	# 3. Speed Slider (Slow, Intermediate, Fast)
-	var speed_idx = 2 # default Fast
+	var speed_idx = 1 # default Intermediate
 	if is_equal_approx(ConfigManager.tick_speed, 0.5):
 		speed_idx = 0
 	elif is_equal_approx(ConfigManager.tick_speed, 0.1):
 		speed_idx = 1
+	elif is_equal_approx(ConfigManager.tick_speed, 0.05):
+		speed_idx = 2
 		
 	var format_speed = func(val):
 		var idx = int(val)
 		if idx == 0: return "Slow (0.50s ticks)"
-		elif idx == 1: return "Intermediate (0.10s / 100ms ticks)"
-		else: return "Fast (0.05s / 50ms ticks)"
+		elif idx == 1: return "Intermediate (0.10s or 100ms ticks)"
+		else: return "Fast (0.05s or 50ms ticks)"
 		
 	create_slider_row(
 		grid,
@@ -231,8 +239,48 @@ func _ready() -> void:
 		flood_chk.text = "Enabled" if pressed else "Disabled"
 	)
 	
+	# 8. Background Music CheckButton
+	var music_lbl = create_label("Background Music:")
+	grid.add_child(music_lbl)
+	
+	var music_chk = CheckButton.new()
+	music_chk.text = "Enabled" if ConfigManager.music_enabled else "Disabled"
+	music_chk.button_pressed = ConfigManager.music_enabled
+	style_checkbutton(music_chk)
+	grid.add_child(music_chk)
+	
+	# 9. Music Volume Slider
+	var format_volume = func(val):
+		return "%d%%" % int(val * 100.0)
+		
+	var volume_slider = create_slider_row(
+		grid,
+		"Music Volume:",
+		0.0, 1.0, 0.05,
+		ConfigManager.music_volume,
+		func(val):
+			ConfigManager.music_volume = val
+			var mp = get_node_or_null("/root/MusicPlayer")
+			if mp != null:
+				mp.update_volume(),
+		format_volume
+	)
+	
+	music_chk.toggled.connect(func(pressed):
+		ConfigManager.music_enabled = pressed
+		music_chk.text = "Enabled" if pressed else "Disabled"
+		var mp = get_node_or_null("/root/MusicPlayer")
+		if mp != null:
+			mp.update_volume()
+			if pressed:
+				mp.play_music()
+			else:
+				mp.stop_music()
+	)
+	
 	# Setup autofocus on Red checkbutton so keyboard/controller navigation works immediately
 	red_chk.grab_focus()
+
 
 func create_label(txt: String) -> Label:
 	var lbl = Label.new()

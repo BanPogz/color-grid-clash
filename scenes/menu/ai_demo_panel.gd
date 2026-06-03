@@ -237,7 +237,7 @@ func setup_left_sidebar() -> void:
 	vbox.add_child(deck)
 	
 	var r_prev_move = [null]
-	var p_prev_move = create_stepper_btn("res://assets/goto_prevmove.png", _on_prev_move_pressed, "Prev Game Tick / Move", r_prev_move)
+	var p_prev_move = create_stepper_btn("res://assets/goto_prevmove.png", _on_prev_move_pressed, "Prev Game Tick or Move", r_prev_move)
 	prev_move_btn = r_prev_move[0]
 	deck.add_child(p_prev_move)
 	
@@ -247,7 +247,7 @@ func setup_left_sidebar() -> void:
 	deck.add_child(p_prev_line)
 	
 	var r_play = [null]
-	var p_play = create_stepper_btn("res://assets/play.png", _on_play_pause_pressed, "Play / Pause Slow Motion", r_play)
+	var p_play = create_stepper_btn("res://assets/play.png", _on_play_pause_pressed, "Play or Pause Slow Motion", r_play)
 	play_pause_btn = r_play[0]
 	deck.add_child(p_play)
 	
@@ -257,7 +257,7 @@ func setup_left_sidebar() -> void:
 	deck.add_child(p_next_line)
 	
 	var r_next_move = [null]
-	var p_next_move = create_stepper_btn("res://assets/goto_nextmove.png", _on_next_move_pressed, "Skip / Execute Final Move", r_next_move)
+	var p_next_move = create_stepper_btn("res://assets/goto_nextmove.png", _on_next_move_pressed, "Skip or Execute Final Move", r_next_move)
 	next_move_btn = r_next_move[0]
 	deck.add_child(p_next_move)
 	

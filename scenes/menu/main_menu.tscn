@@ -9,6 +9,12 @@
 [sub_resource type="LabelSettings" id="LabelSettings_3rkf3"]
 font = ExtResource("1_nl8w3")
 font_size = 64
+font_color = Color(1, 1, 1, 1)
+outline_color = Color(1, 0.165, 0.475, 0.85)
+outline_size = 0
+shadow_color = Color(0, 0.941, 1, 0.35)
+shadow_size = 12
+shadow_offset = Vector2(0, 0)
 
 [node name="MainMenuScreen" type="CanvasLayer" unique_id=763482701]
 script = ExtResource("1_main_menu_script")
@@ -62,7 +68,7 @@ alignment = 0
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_3rkf3")
 theme_override_font_sizes/font_size = 24
-text = "RULES AND MECHANICS  "
+text = "RULES & MECHANICS"
 alignment = 0
 
 [node name="StatsButton" type="Button" parent="Control/Panel/VBoxContainer" unique_id=971277413]
@@ -76,7 +82,7 @@ alignment = 0
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_3rkf3")
 theme_override_font_sizes/font_size = 24
-text = "Configuration"
+text = "CONFIGURATION"
 alignment = 0
 
 [node name="AIdemo" type="Button" parent="Control/Panel/VBoxContainer" unique_id=1906558961]

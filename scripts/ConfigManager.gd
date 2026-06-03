@@ -32,12 +32,16 @@ var player_setup: PlayerSetup:
 				blue_is_ai = true
 
 var max_rounds: int = 5
-var tick_speed: float = 0.05 # default is Intermediate (0.1) or Fast (0.05)
+var tick_speed: float = 0.1 # default is Intermediate (0.1)
 var timer_mode: TimerMode = TimerMode.INFINITE
 var round_time_limit: int = 60 # in seconds (default is 1 minute)
 var wall_density_type: String = "LESS" # NONE, LESS, MORE
 var cores_count_type: String = "LESS" # NONE, LESS, MORE
 var flood_fill_enabled: bool = true
+
+var music_enabled: bool = true
+var music_volume: float = 0.5
+
 
 func get_wall_density() -> float:
 	match wall_density_type:

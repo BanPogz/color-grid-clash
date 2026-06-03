@@ -122,8 +122,9 @@ func evaluate(state: Dictionary, terminal_status: Dictionary) -> float:
 	var blue_trail: int = state["blue_trail_count"]
 	var red_trail: int = state["red_trail_count"]
 	
-	var blue_reach: int = bfs_reachable(state, state["blue_pos"])
-	var red_reach: int = bfs_reachable(state, state["red_pos"])
+	# BFS is capped at 150 cells for evaluation as it's more than sufficient to detect safety/cramping
+	var blue_reach: int = bfs_reachable(state, state["blue_pos"], 150)
+	var red_reach: int = bfs_reachable(state, state["red_pos"], 150)
 	
 	var blue_bonus: float = state.get("blue_bonus", 0.0)
 	var red_bonus: float = state.get("red_bonus", 0.0)
@@ -131,8 +132,8 @@ func evaluate(state: Dictionary, terminal_status: Dictionary) -> float:
 	# Group Weights: w1 = 1.0, w2 = 2.0, plus core bonuses
 	return 1.0 * (blue_trail - red_trail) + 2.0 * (blue_reach - red_reach) + (blue_bonus - red_bonus)
 
-# Breadth-First Search (BFS) for Flood-Fill Spatial Analysis
-func bfs_reachable(state: Dictionary, head_pos: Vector2i) -> int:
+# Breadth-First Search (BFS) for Flood-Fill Spatial Analysis with optional cell cap
+func bfs_reachable(state: Dictionary, head_pos: Vector2i, max_cells: int = 999999) -> int:
 	var matrix = state["matrix"]
 	var visited = {} # Dictionary utilized as a high-performance hash set
 	var queue: Array[Vector2i] = []
@@ -143,8 +144,12 @@ func bfs_reachable(state: Dictionary, head_pos: Vector2i) -> int:
 		if is_empty_cell(matrix, neighbor):
 			queue.append(neighbor)
 			
-	while not queue.is_empty():
-		var cell = queue.pop_front()
+	var q_idx = 0
+	while q_idx < queue.size():
+		if visited.size() >= max_cells:
+			break
+		var cell = queue[q_idx]
+		q_idx += 1
 		if not visited.has(cell):
 			visited[cell] = true
 			for dir in DIRECTIONS:
@@ -160,7 +165,8 @@ func order_moves(moves: Array, state: Dictionary, is_max: bool) -> Array:
 	for move in moves:
 		var child = apply_move(state, move, is_max)
 		var current_head = child["blue_pos"] if is_max else child["red_pos"]
-		var space_score = bfs_reachable(child, current_head)
+		# Shallow BFS up to 25 cells is extremely fast and perfectly sufficient to order moves
+		var space_score = bfs_reachable(child, current_head, 25)
 		scored_moves.append({"move": move, "score": space_score})
 		
 	# Sort array using an inline custom lambda configuration
